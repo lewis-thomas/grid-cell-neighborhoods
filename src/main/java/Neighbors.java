@@ -12,10 +12,10 @@ import org.slf4j.LoggerFactory;
 public class Neighbors {
 
     private static Logger logger = LoggerFactory.getLogger(Neighbors.class);
-    public static final String FIELD_DISTANCE_THRESHOLD = "distanceThreshold";
-    public static final String FIELD_PERFORM_TEST = "performTest";
-    public static final boolean PERFORM_TEST_DEFAULT = false;
-    public static final String FIELD_DATA = "data";
+    private static final String FIELD_DISTANCE_THRESHOLD = "distanceThreshold";
+    private static final String FIELD_PERFORM_TEST = "performTest";
+    private static final boolean PERFORM_TEST_DEFAULT = false;
+    private static final String FIELD_DATA = "data";
 
 
     public static void main(String[] args) {
@@ -49,7 +49,7 @@ public class Neighbors {
 
     // set all neighbors within Manhattan Distance {distanceThreshold} to true
     // return a count of all set to true (not counting those already true)
-    public static int flagNeighbors(int targetRow, int targetCol, int distanceThreshold, boolean[][] neighbors) {
+    private static int flagNeighbors(int targetRow, int targetCol, int distanceThreshold, boolean[][] neighbors) {
         // walk the square around the location of size distanceThreshold,
         // if Manhattan Distance of x,y from targetCol, targetRow > distanceThreshold skip
         // if the neighbors array x,y is false, set to true and add to flaggedCount
@@ -72,7 +72,7 @@ public class Neighbors {
     // given an input 2D array generate an output 2D array with the same dimensions
     // with all cells that fall within N steps of any positive values in the array 1 else 0
     // return the number of cells that fall within N steps of any positive values in the array
-    public static int getNeighbors(int [][] array, int distanceThreshold, boolean performTest) {
+    private static int getNeighbors(int [][] array, int distanceThreshold, boolean performTest) {
         // generate a 2D array with the same dimensions to track
         int neighborCount = 0;
         boolean[][] neighbors = new boolean[array.length][array[0].length];
@@ -99,7 +99,7 @@ public class Neighbors {
      * @param jsonArray the input two-dimensional JsonArray
      * @return a standard two-dimensional array of integers
      */
-    public static int[][] parseJsonArray(JsonArray jsonArray) {
+    private static int[][] parseJsonArray(JsonArray jsonArray) {
         StringBuilder sb = new StringBuilder();
         if (jsonArray.size()==0) return new int[0][0];
         int height = jsonArray.size();
@@ -118,7 +118,7 @@ public class Neighbors {
 
     // visualization function - show array
     // if asBinary = true then normalized to 1 for positive values, else 0
-    public static String printArray(int[][] neighbors, boolean asBinary) {
+    private static String printArray(int[][] neighbors, boolean asBinary) {
         StringBuilder sb = new StringBuilder();
 
         for (int row = 0; row < neighbors.length; row++) {
@@ -131,7 +131,7 @@ public class Neighbors {
     }
 
     // visualization function - show all neighbors
-    public static void printNeighbors(boolean[][] neighbors) {
+    private static void printNeighbors(boolean[][] neighbors) {
         StringBuilder sb = new StringBuilder();
 
         for (int row = 0; row < neighbors.length; row++) {
@@ -145,7 +145,7 @@ public class Neighbors {
 
     // check if a location should be flagged
     // return if the location is within distanceThreshold Manhattan distance of a positive value
-    public static boolean shouldBeFlagged(int targetRow, int targetCol, int distanceThreshold, int[][] neighbors) {
+    private static boolean shouldBeFlagged(int targetRow, int targetCol, int distanceThreshold, int[][] neighbors) {
         // walk the square around the location of size distanceThreshold,
         // if Manhattan Distance of x,y from targetCol, targetRow > distanceThreshold continue
         // if the neighbors array x,y is false, set to true and add to flaggedCount
@@ -165,7 +165,7 @@ public class Neighbors {
     // walk the flagged array and check each value
     // if it is within distanceThreshold Manhattan distance of a positive value in the neighbors array
     // then it must be flagged, and if not within th threshold it must not be flagged
-    public static boolean testResults(int distanceThreshold, int[][] neighbors, boolean[][] flagged) {
+    private static boolean testResults(int distanceThreshold, int[][] neighbors, boolean[][] flagged) {
         StringBuilder sb = new StringBuilder();
         boolean hasError = false;
 
