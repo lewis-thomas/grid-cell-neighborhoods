@@ -85,7 +85,7 @@ public class Neighbors {
                 }
             }
         }
-        printNeighbors(neighbors);
+        logger.info("neighbors array:\n" + printArray(neighbors));
         if (performTest) {
             logger.info("hasError? " + testResults(distanceThreshold, array, neighbors));
         }
@@ -118,8 +118,13 @@ public class Neighbors {
     }
 
 
-    // visualization function - show array
-    // if asBinary = true then normalized to 1 for positive values, else 0
+    /**
+     * prints the array to a string as 1 or 0
+     * Assumes the array is not jagged
+     *
+     * @param neighbors the input two-dimensional JsonArray
+     * @return a string of 0s and 1s with lines = row count, each lines length = col count
+     * */
     private static String printArray(boolean[][] neighbors) {
         StringBuilder sb = new StringBuilder();
 
@@ -130,19 +135,6 @@ public class Neighbors {
             sb.append("\n");
         }
         return sb.toString();
-    }
-
-    // visualization function - show all neighbors
-    private static void printNeighbors(boolean[][] neighbors) {
-        StringBuilder sb = new StringBuilder();
-
-        for (int row = 0; row < neighbors.length; row++) {
-            for (int col = 0; col < neighbors[row].length; col++) {
-                sb.append (neighbors[row][col] ? "1" : "0");
-            }
-            sb.append("\n");
-        }
-        logger.info("neighbors:\n" + sb.toString());
     }
 
     // check if a location should be flagged
