@@ -2,6 +2,7 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
+
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
@@ -16,6 +17,7 @@ public class Neighbors {
     private static final String FIELD_PERFORM_TEST = "performTest";
     private static final boolean PERFORM_TEST_DEFAULT = false;
     private static final String FIELD_DATA = "data";
+    private static int flagCount = 0;
 
     /**
      * Reads in an input array of numbers, and a distance threshold,
@@ -49,6 +51,7 @@ public class Neighbors {
         boolean performTest = jsonObject.getBoolean(FIELD_PERFORM_TEST, PERFORM_TEST_DEFAULT);
         JsonArray dataArray = jsonObject.getJsonArray(FIELD_DATA);
         logger.info("distance threshold: " + distanceThreshold);
+        Integer flagCount =0;
         boolean[][] array = parseJsonArray(dataArray);
 
         if (array.length == 0 || distanceThreshold < 0) {
@@ -56,12 +59,33 @@ public class Neighbors {
                     "integer >=0 and a 'data' 2 dimenisonal array");
             return;
         }
-        int neighborCount = getNeighbors(array, distanceThreshold,  performTest);
+        int neighborCount = getNeighbors(array, distanceThreshold, flagCount, performTest);
         System.out.println("found neighbor count " + neighborCount);
         long endTime = System.nanoTime();
         long duration = endTime - startTime;
         long durationMillis = duration / 1_000_000;
         System.out.println("elapsed time in ms:" + durationMillis);
+    }
+
+    /**
+     * calculates whether array is "dense" meaning many overlaps and the naive fill
+     * will be slow due to many overlaps
+     * can be used to optimize algorithm choice
+     * @param array a 2 dimensional array that is grid shaped with flagged values set to true
+     * @param arrayFlagCount count of flagged values in array
+     * @param distanceThreshold a number of Manhattan Distance steps to walk for neighbors
+     * @return whether or not the array is considered dense
+     */
+    private static boolean arrayIsDense (boolean[][] array, int distanceThreshold, int arrayFlagCount) {
+        int gridSize = array.length * array[0].length;
+        double density = 1.0 * arrayFlagCount * 2 * distanceThreshold * (distanceThreshold +1 ) / gridSize ;
+        boolean isDense = density > distanceThreshold;
+        logger.info("density = arrayFlagCount * 2 * distanceThreshold * (distanceThreshold +1 ) / gridSize ");
+        logger.info("arrayFlagCount : " + arrayFlagCount + " distanceThreshold: " + distanceThreshold + " = "
+                + arrayFlagCount * distanceThreshold + " gridSize: " + gridSize);
+        logger.info("density: " + density);
+        logger.info("isDense: " + isDense);
+        return isDense;
     }
 
     /**
@@ -98,32 +122,51 @@ public class Neighbors {
     }
 
     /**
-     * Find all cells that fall within Manhattan distance steps of flagged values of a grid
-     * Assumes array is a grid and not jagged
-     * This method uses a secondary array to avoid double counting squares
-     * it walks all grid items, and when finding a true (flagged) value it uses
-     * a secondary function flagNeighbors to flag all cells that fall
-     * within distanceThreshold Manhattan distance steps
-     * @param array a 2 dimensional array that is grid shaped
-     * @param distanceThreshold a number of steps that
+     * find all neighbors of true values in 2 dimensional array within
+     * distanceThreshold Manhattan Distance of a flagged (true) value
+     * for dense arrays search for flags from every point via flagSearch
+     * for sparse arrays fill around every flag via flagFill
+     * @param array a 2 dimensional array that is grid shaped with flagged values set to true
+     * @param distanceThreshold a number of Manhattan Distance steps to walk for neighbors
+     * @param arrayFlagCount count of flagged values in array
      * @param performTest if a validation test should be performed
      * @return count of cells falling within distanceThreshold of true values in array
      */
-    private static int getNeighbors(boolean [][] array, int distanceThreshold, boolean performTest) {
-        int neighborCount = 0;
+    private static int getNeighbors(boolean [][] array, int distanceThreshold, int arrayFlagCount,
+                                    boolean performTest) {
         // generate a 2D array with the same dimensions to track
         boolean[][] neighbors = new boolean[array.length][array[0].length];
         logger.info("input array:\n" + printArray(array));
+        boolean isDense = arrayIsDense(array, distanceThreshold, arrayFlagCount);
+        int neighborCount = isDense ? flagSearch(array, distanceThreshold) : flagFill(array, neighbors, distanceThreshold);
+        if (performTest) {
+            int altCount = !isDense ? flagSearch(array, distanceThreshold) : flagFill(array, neighbors, distanceThreshold);
+            if (altCount != neighborCount) {
+                logger.warn("Primary " + neighborCount +" and Alternate " + altCount +" counts do not match");
+            }
+            logger.info("Alternate Count: " + altCount);
+        }
+        logger.info("neighbors array:\n" + printArray(neighbors));
+        return neighborCount;
+    }
+
+    /**
+     * find all neighbors of true values in 2 dimensional array within
+     * distanceThreshold Manhattan Distance of a flagged (true) value
+     * by filling around every flag via flagFill
+     * @param array a 2 dimensional array that is grid shaped with flagged values set to true
+     * @param neighbors a 2 dimensional array to track fills to avoid double counting
+     * @param distanceThreshold a number of Manhattan Distance steps to walk for neighbors
+     * @return count of cells falling within distanceThreshold of true values in array
+     */
+    private static int flagFill(boolean [][] array, boolean [][] neighbors, int distanceThreshold){
+        int neighborCount = 0;
         for (int row = 0; row < array.length; row++) {
             for (int col = 0; col < array[row].length; col++) {
                 if (array[row][col]) {
                     neighborCount += flagNeighbors(row, col, distanceThreshold, neighbors);
                 }
             }
-        }
-        logger.info("neighbors array:\n" + printArray(neighbors));
-        if (performTest) {
-            logger.info("hasError? " + testResults(distanceThreshold, array, neighbors));
         }
         return neighborCount;
     }
@@ -143,11 +186,13 @@ public class Neighbors {
         int height = jsonArray.size();
         int width = jsonArray.getJsonArray(0).size();
         boolean[][] array = new boolean[height][width];
+        flagCount = 0;
         logger.info("parsing JSON array with height "+height+" width "+width);
         for (int row = 0; row <height; row++) {
             JsonArray rowData = jsonArray.getJsonArray(row);
             for (int col = 0; col < width; col++) {
                 array[row][col] = rowData.getJsonNumber(col).doubleValue() > 0;
+                flagCount+= array[row][col] ? 1 : 0;
             }
         }
         return array;
@@ -211,19 +256,15 @@ public class Neighbors {
      * @param flagged the calculated result
      * @return boolean
      */
-    private static boolean testResults(int distanceThreshold, boolean[][] neighbors, boolean[][] flagged) {
+    private static int flagSearch(boolean[][] array, int distanceThreshold) {
         StringBuilder sb = new StringBuilder();
         boolean hasError = false;
-
-        for (int row = 0; row < neighbors.length; row++) {
-            for (int col = 0; col < neighbors[row].length; col++) {
-                int val = (flagged[row][col] ? 1 : 0) | (shouldBeFlagged(row, col, distanceThreshold, neighbors) ? 2 : 0);
-                sb.append ("" + val);
-                hasError = hasError || val ==1 || val == 2;
+        int neighborCount = 0;
+        for (int row = 0; row < array.length; row++) {
+            for (int col = 0; col < array[row].length; col++) {
+                neighborCount += shouldBeFlagged(row, col, distanceThreshold, array) ? 1 : 0;
             }
-            sb.append("\n");
         }
-        logger.info("test results array:\n" + sb.toString());
-        return hasError;
+        return neighborCount;
     }
 }
