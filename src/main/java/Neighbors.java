@@ -17,8 +17,19 @@ public class Neighbors {
     private static final boolean PERFORM_TEST_DEFAULT = false;
     private static final String FIELD_DATA = "data";
 
-
+    /**
+     * Reads in an input array of numbers, and a distance threshold,
+     * with optional performTest to validate results
+     * Parses the array to a grid of boolean values and calculates the number
+     * of squares that are within Manhattan Distance of any positive values from the input array
+     * outputs the result to the console
+     * @param args a string filename of a JSON file
+     *             with a "data" 2 dimensional array
+     *             a "distanceThreshold" integer > 0
+     *             an optional "performTest" boolean
+     */
     public static void main(String[] args) {
+        long startTime = System.nanoTime();
         if (args.length == 0) {
             System.out.println("Please enter a JSON file path with neighbor data");
             return;
@@ -41,22 +52,39 @@ public class Neighbors {
         boolean[][] array = parseJsonArray(dataArray);
 
         if (array.length == 0 || distanceThreshold < 0) {
-            System.out.println("please supply a JSON file with a 'distanceThreshold' integer >=0 and a 'data' 2 dimenisonal array");
+            System.out.println("please supply a JSON file with a 'distanceThreshold' " +
+                    "integer >=0 and a 'data' 2 dimenisonal array");
             return;
         }
         int neighborCount = getNeighbors(array, distanceThreshold,  performTest);
         System.out.println("found neighbor count " + neighborCount);
+        long endTime = System.nanoTime();
+        long duration = endTime - startTime;
+        long durationMillis = duration / 1_000_000;
+        System.out.println("elapsed time in ms:" + durationMillis);
     }
 
-    // set all neighbors within Manhattan Distance {distanceThreshold} to true
-    // return a count of all set to true (not counting those already true)
-    private static int flagNeighbors(int targetRow, int targetCol, int distanceThreshold, boolean[][] neighbors) {
-        // walk the square around the location of size distanceThreshold,
-        // if Manhattan Distance of x,y from targetCol, targetRow > distanceThreshold skip
-        // if the neighbors array x,y is false, set to true and add to flaggedCount
+    /**
+     * Set all neighbors within distanceThreshold of the target Manhattan Distance to true
+     * Walks the square around the location of size distanceThreshold,
+     * for 0 only the square itself
+     * If Manhattan Distance of x,y from targetCol, targetRow > distanceThreshold skip
+     * If the neighbors array x,y is false, set to true and add to flaggedCount
+     * @param targetRow target location row
+     * @param targetCol target location column
+     * @param distanceThreshold the maximum Manhattan Distance to check 0 being self
+     * @param neighbors the grid used for tracking what is getting set to true
+     * @return count of all set to true (not counting those already true)
+     */
+    private static int flagNeighbors(int targetRow, int targetCol,
+                                     int distanceThreshold, boolean[][] neighbors) {
         int flaggedCount = 0;
-        for (int row = Math.max(targetRow-distanceThreshold, 0); row < Math.min(neighbors.length, targetRow + distanceThreshold+1); row++) {
-            for (int col = Math.max(targetCol-distanceThreshold,0); col < Math.min(neighbors[row].length, targetCol + distanceThreshold+1); col++) {
+        final int minRow = Math.max(targetRow-distanceThreshold, 0);
+        final int maxRow = Math.min(neighbors.length, targetRow + distanceThreshold+1);
+        final int minCol = Math.max(targetCol-distanceThreshold,0);
+        final int maxCol = Math.min(neighbors[0].length, targetCol + distanceThreshold+1);
+        for (int row = minRow; row < maxRow; row++) {
+            for (int col = minCol; col < maxCol; col++) {
                 int manhattanDistance = Math.abs(col-targetCol) + Math.abs(row-targetRow);
                 logger.debug("position " + col + " " + row + " distance " + manhattanDistance + " threshold " + distanceThreshold + " skip ? " + (manhattanDistance > distanceThreshold));
                 if (manhattanDistance > distanceThreshold) continue;
@@ -67,15 +95,23 @@ public class Neighbors {
             }
         }
         return flaggedCount;
-
     }
 
-    // given an input 2D array generate an output 2D array with the same dimensions
-    // with all cells that fall within N steps of any positive values in the array 1 else 0
-    // return the number of cells that fall within N steps of any positive values in the array
+    /**
+     * Find all cells that fall within Manhattan distance steps of flagged values of a grid
+     * Assumes array is a grid and not jagged
+     * This method uses a secondary array to avoid double counting squares
+     * it walks all grid items, and when finding a true (flagged) value it uses
+     * a secondary function flagNeighbors to flag all cells that fall
+     * within distanceThreshold Manhattan distance steps
+     * @param array a 2 dimensional array that is grid shaped
+     * @param distanceThreshold a number of steps that
+     * @param performTest if a validation test should be performed
+     * @return count of cells falling within distanceThreshold of true values in array
+     */
     private static int getNeighbors(boolean [][] array, int distanceThreshold, boolean performTest) {
-        // generate a 2D array with the same dimensions to track
         int neighborCount = 0;
+        // generate a 2D array with the same dimensions to track
         boolean[][] neighbors = new boolean[array.length][array[0].length];
         logger.info("input array:\n" + printArray(array));
         for (int row = 0; row < array.length; row++) {
@@ -137,12 +173,18 @@ public class Neighbors {
         return sb.toString();
     }
 
-    // check if a location should be flagged
-    // return if the location is within distanceThreshold Manhattan distance of a positive value
+    /**
+     * check if a target location should be flagged by walking Manhattan distance checking for
+     * a flag value
+     * we walk a grid, skipping elements outside Manhattan distance,
+     * checking all entries within Manhattan distance and exiting if we find a flag
+     * @param targetRow the target location row
+     * @param targetCol the target location column
+     * @param distanceThreshold the maximum distance to walk
+     * @param neighbors the grid of flagged values
+     * @return boolean whether the location should be flagged
+     */
     private static boolean shouldBeFlagged(int targetRow, int targetCol, int distanceThreshold, boolean[][] neighbors) {
-        // walk the square around the location of size distanceThreshold,
-        // if Manhattan Distance of x,y from targetCol, targetRow > distanceThreshold continue
-        // if the neighbors array x,y is false, set to true and add to flaggedCount
         for (int y = Math.max(targetRow-distanceThreshold, 0); y < Math.min(neighbors.length, targetRow + distanceThreshold+1); y++) {
             for (int x = Math.max(targetCol-distanceThreshold,0); x < Math.min(neighbors[y].length, targetCol + distanceThreshold+1); x++) {
                 int manhattanDistance = Math.abs(x-targetCol) + Math.abs(y-targetRow);
@@ -156,9 +198,19 @@ public class Neighbors {
         return false;
     }
 
-    // walk the flagged array and check each value
-    // if it is within distanceThreshold Manhattan distance of a positive value in the neighbors array
-    // then it must be flagged, and if not within th threshold it must not be flagged
+    /**
+     * Executes an alternate method via shouldBeFlagged for calculating neighbors
+     * and compare to the flagged array
+     * builds a visualization string where
+     *  0 indicates a correctly non-flagged point
+     *  1 indicates an incorrectly flagged point
+     *  2 indicates an incorrectly non flagged point
+     *  3 indicates a correctly flagged point
+     * @param distanceThreshold the neighbor distance threshold
+     * @param neighbors the original 2d array of booleans
+     * @param flagged the calculated result
+     * @return boolean
+     */
     private static boolean testResults(int distanceThreshold, boolean[][] neighbors, boolean[][] flagged) {
         StringBuilder sb = new StringBuilder();
         boolean hasError = false;
