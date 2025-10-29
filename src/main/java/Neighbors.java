@@ -51,7 +51,6 @@ public class Neighbors {
         boolean performTest = jsonObject.getBoolean(FIELD_PERFORM_TEST, PERFORM_TEST_DEFAULT);
         JsonArray dataArray = jsonObject.getJsonArray(FIELD_DATA);
         logger.info("distance threshold: " + distanceThreshold);
-        Integer flagCount =0;
         boolean[][] array = parseJsonArray(dataArray);
 
         if (array.length == 0 || distanceThreshold < 0) {
