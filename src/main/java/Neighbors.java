@@ -19,12 +19,12 @@ public class Neighbors {
 
     /**
      * Reads in an input array of numbers, and a distance threshold,
-     * uses env variable performTest to validate results
+     * uses env variable performTest to determine whether to validate results
      * Parses the array to a grid of boolean values and calculates the number
      * of squares that are within Manhattan Distance of any positive values from the input array
      * outputs the result to the console
-     * @param args a string filename of a JSON file
-     *             with a "data" 2 dimensional array
+     * @param args a string filename of a JSON file containing
+     *             a "data" 2 dimensional array
      *             a "distanceThreshold" integer > 0
      */
     public static void main(String[] args) {
@@ -64,9 +64,8 @@ public class Neighbors {
     }
 
     /**
-     * calculates whether array is "dense" meaning many overlaps and the naive fill
-     * will be slow due to many overlaps
-     * can be used to optimize algorithm choice
+     * calculates whether array is "dense" meaning many overlaps and a fill
+     * approach is likely to be slower than searching for neighbors due to many overlaps
      * @param array a 2 dimensional array that is grid shaped with flagged values set to true
      * @param arrayFlagCount count of flagged values in array
      * @param distanceThreshold a number of Manhattan Distance steps to walk for neighbors
@@ -89,7 +88,7 @@ public class Neighbors {
      * Walks the square around the location of size distanceThreshold,
      * for 0 only the square itself
      * If Manhattan Distance of x,y from targetCol, targetRow > distanceThreshold skip
-     * If the neighbors array x,y is false, set to true and add to flaggedCount
+     * uses a neighbors integer array to avoid duplicates and optimize searching
      * @param targetRow target location row
      * @param targetCol target location column
      * @param distanceThreshold the maximum Manhattan Distance to check 0 being self
@@ -116,8 +115,8 @@ public class Neighbors {
                     neighbors[row][col]=newVal;
                     flaggedCount+= neighborVal == 0 ? 1 : 0;
                 }
-                else {
-                    col += Math.max(0,neighborVal - 1);
+                else if (neighborVal > 1) {
+                    col += neighborVal - 1;
                 }
             }
         }
@@ -140,7 +139,7 @@ public class Neighbors {
         // generate a 2D array with the same dimensions to track
         int[][] neighbors = new int[array.length][array[0].length];
         logger.info("input array:\n" + printArray(array));
-        boolean isDense = false;//arrayIsDense(array, distanceThreshold, arrayFlagCount);
+        boolean isDense = arrayIsDense(array, distanceThreshold, arrayFlagCount);
         int neighborCount = isDense ? flagSearch(array, distanceThreshold) : flagFill(array, neighbors, distanceThreshold);
         if (performTest) {
             logger.info("executing test");
@@ -207,7 +206,7 @@ public class Neighbors {
      * prints the array to a string as 1 or 0
      * Assumes the array is not jagged
      *
-     * @param neighbors the input two-dimensional JsonArray
+     * @param neighbors the input two-dimensional boolean array
      * @return a string of 0s and 1s with lines = row count, each lines length = col count
      * */
     private static String printArray(boolean[][] neighbors) {
@@ -223,11 +222,11 @@ public class Neighbors {
     }
 
     /**
-     * prints the array to a string as 1 or 0
+     * prints the array to a string as integers
      * Assumes the array is not jagged
      *
-     * @param neighbors the input two-dimensional JsonArray
-     * @return a string of 0s and 1s with lines = row count, each lines length = col count
+     * @param neighbors the two-dimensional int array
+     * @return a string of integers with lines = row count, each lines length = col count
      * */
     private static String printArray(int[][] neighbors) {
         StringBuilder sb = new StringBuilder();
