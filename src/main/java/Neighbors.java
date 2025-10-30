@@ -100,7 +100,7 @@ public class Neighbors {
      * @return count of all set to true (not counting those already true)
      */
     private static int flagNeighbors(int targetRow, int targetCol,
-                                     int distanceThreshold, boolean[][] neighbors) {
+                                     int distanceThreshold, int[][] neighbors) {
         int flaggedCount = 0;
         final int minRow = Math.max(targetRow-distanceThreshold, 0);
         final int maxRow = Math.min(neighbors.length, targetRow + distanceThreshold+1);
@@ -111,9 +111,10 @@ public class Neighbors {
                 int manhattanDistance = Math.abs(col-targetCol) + Math.abs(row-targetRow);
                 logger.debug("position " + col + " " + row + " distance " + manhattanDistance + " threshold " + distanceThreshold + " skip ? " + (manhattanDistance > distanceThreshold));
                 if (manhattanDistance > distanceThreshold) continue;
-                if (!neighbors[row][col]) {
-                    neighbors[row][col]=true;
-                    flaggedCount++;
+                int neighborVal = neighbors[row][col];
+                if (neighborVal < manhattanDistance) {
+                    neighbors[row][col]=manhattanDistance;
+                    flaggedCount+= neighborVal == 0 ? 1 : 0;
                 }
             }
         }
@@ -134,14 +135,14 @@ public class Neighbors {
     private static int getNeighbors(boolean [][] array, int distanceThreshold, int arrayFlagCount,
                                     boolean performTest) {
         // generate a 2D array with the same dimensions to track
-        boolean[][] neighbors = new boolean[array.length][array[0].length];
+        int[][] neighbors = new int[array.length][array[0].length];
         logger.info("input array:\n" + printArray(array));
         boolean isDense = arrayIsDense(array, distanceThreshold, arrayFlagCount);
         int neighborCount = isDense ? flagSearch(array, distanceThreshold) : flagFill(array, neighbors, distanceThreshold);
         if (performTest) {
             int altCount = !isDense ? flagSearch(array, distanceThreshold) : flagFill(array, neighbors, distanceThreshold);
             if (altCount != neighborCount) {
-                logger.warn("Primary " + neighborCount +" and Alternate " + altCount +" counts do not match");
+                logger.error("Primary " + neighborCount +" and Alternate " + altCount +" counts do not match");
             }
             logger.info("Alternate Count: " + altCount);
         }
@@ -158,7 +159,7 @@ public class Neighbors {
      * @param distanceThreshold a number of Manhattan Distance steps to walk for neighbors
      * @return count of cells falling within distanceThreshold of true values in array
      */
-    private static int flagFill(boolean [][] array, boolean [][] neighbors, int distanceThreshold){
+    private static int flagFill(boolean [][] array, int [][] neighbors, int distanceThreshold){
         int neighborCount = 0;
         for (int row = 0; row < array.length; row++) {
             for (int col = 0; col < array[row].length; col++) {
@@ -211,6 +212,25 @@ public class Neighbors {
         for (int row = 0; row < neighbors.length; row++) {
             for (int col = 0; col < neighbors[row].length; col++) {
                 sb.append (neighbors[row][col] ? "1" : "0");
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * prints the array to a string as 1 or 0
+     * Assumes the array is not jagged
+     *
+     * @param neighbors the input two-dimensional JsonArray
+     * @return a string of 0s and 1s with lines = row count, each lines length = col count
+     * */
+    private static String printArray(int[][] neighbors) {
+        StringBuilder sb = new StringBuilder();
+
+        for (int row = 0; row < neighbors.length; row++) {
+            for (int col = 0; col < neighbors[row].length; col++) {
+                sb.append ("" + neighbors[row][col]);
             }
             sb.append("\n");
         }
