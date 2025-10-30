@@ -14,21 +14,18 @@ public class Neighbors {
 
     private static Logger logger = LoggerFactory.getLogger(Neighbors.class);
     private static final String FIELD_DISTANCE_THRESHOLD = "distanceThreshold";
-    private static final String FIELD_PERFORM_TEST = "performTest";
-    private static final boolean PERFORM_TEST_DEFAULT = false;
     private static final String FIELD_DATA = "data";
     private static int flagCount = 0;
 
     /**
      * Reads in an input array of numbers, and a distance threshold,
-     * with optional performTest to validate results
+     * uses env variable performTest to validate results
      * Parses the array to a grid of boolean values and calculates the number
      * of squares that are within Manhattan Distance of any positive values from the input array
      * outputs the result to the console
      * @param args a string filename of a JSON file
      *             with a "data" 2 dimensional array
      *             a "distanceThreshold" integer > 0
-     *             an optional "performTest" boolean
      */
     public static void main(String[] args) {
         long startTime = System.nanoTime();
@@ -48,7 +45,7 @@ public class Neighbors {
         JsonObject jsonObject = jsonReader.readObject();
         jsonReader.close();
         int distanceThreshold = jsonObject.getInt(FIELD_DISTANCE_THRESHOLD, -1);
-        boolean performTest = jsonObject.getBoolean(FIELD_PERFORM_TEST, PERFORM_TEST_DEFAULT);
+        boolean performTest = System.getenv("PERFORM_TEST").equals("true");
         JsonArray dataArray = jsonObject.getJsonArray(FIELD_DATA);
         logger.info("distance threshold: " + distanceThreshold);
         boolean[][] array = parseJsonArray(dataArray);
@@ -106,15 +103,21 @@ public class Neighbors {
         final int maxRow = Math.min(neighbors.length, targetRow + distanceThreshold+1);
         final int minCol = Math.max(targetCol-distanceThreshold,0);
         final int maxCol = Math.min(neighbors[0].length, targetCol + distanceThreshold+1);
+        logger.debug("flagNeighbors " + targetRow + "," + targetCol + " checking " + minRow + ","
+                + minCol + " - " + (maxRow -1) + "," + (maxCol-1));
         for (int row = minRow; row < maxRow; row++) {
             for (int col = minCol; col < maxCol; col++) {
                 int manhattanDistance = Math.abs(col-targetCol) + Math.abs(row-targetRow);
-                logger.debug("position " + col + " " + row + " distance " + manhattanDistance + " threshold " + distanceThreshold + " skip ? " + (manhattanDistance > distanceThreshold));
+                logger.debug("target " + targetRow + "," + targetCol + " checking " + row + "," + col + " distance " + manhattanDistance + " threshold " + distanceThreshold + " skip ? " + (manhattanDistance > distanceThreshold) + " neighborVal " + neighbors[row][col]);
                 if (manhattanDistance > distanceThreshold) continue;
                 int neighborVal = neighbors[row][col];
-                if (neighborVal < manhattanDistance) {
-                    neighbors[row][col]=manhattanDistance;
+                int newVal = distanceThreshold - manhattanDistance + 1;
+                if (neighborVal < newVal) {
+                    neighbors[row][col]=newVal;
                     flaggedCount+= neighborVal == 0 ? 1 : 0;
+                }
+                else {
+                    col += Math.max(0,neighborVal - 1);
                 }
             }
         }
@@ -137,9 +140,10 @@ public class Neighbors {
         // generate a 2D array with the same dimensions to track
         int[][] neighbors = new int[array.length][array[0].length];
         logger.info("input array:\n" + printArray(array));
-        boolean isDense = arrayIsDense(array, distanceThreshold, arrayFlagCount);
+        boolean isDense = false;//arrayIsDense(array, distanceThreshold, arrayFlagCount);
         int neighborCount = isDense ? flagSearch(array, distanceThreshold) : flagFill(array, neighbors, distanceThreshold);
         if (performTest) {
+            logger.info("executing test");
             int altCount = !isDense ? flagSearch(array, distanceThreshold) : flagFill(array, neighbors, distanceThreshold);
             if (altCount != neighborCount) {
                 logger.error("Primary " + neighborCount +" and Alternate " + altCount +" counts do not match");
