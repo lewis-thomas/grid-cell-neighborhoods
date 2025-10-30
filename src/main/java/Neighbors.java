@@ -15,7 +15,19 @@ public class Neighbors {
     private static Logger logger = LoggerFactory.getLogger(Neighbors.class);
     private static final String FIELD_DISTANCE_THRESHOLD = "distanceThreshold";
     private static final String FIELD_DATA = "data";
-    private static int flagCount = 0;
+
+    /**
+     * class for holding results of the array parse
+     * we need to track 
+     */
+    private static class ArrayParseResults {
+        public boolean[][] array;
+        public int flagCount;
+        public ArrayParseResults(boolean[][] array, int flagCount) {
+            this.array = array;
+            this.flagCount = flagCount;
+        }
+    }
 
     /**
      * Reads in an input array of numbers, and a distance threshold,
@@ -48,14 +60,14 @@ public class Neighbors {
         boolean performTest = System.getenv("PERFORM_TEST").equals("true");
         JsonArray dataArray = jsonObject.getJsonArray(FIELD_DATA);
         logger.info("distance threshold: " + distanceThreshold);
-        boolean[][] array = parseJsonArray(dataArray);
+        ArrayParseResults arrayResults = parseJsonArray(dataArray);
 
-        if (array.length == 0 || distanceThreshold < 0) {
+        if (arrayResults.array.length == 0 || distanceThreshold < 0) {
             System.out.println("please supply a JSON file with a 'distanceThreshold' " +
                     "integer >=0 and a 'data' 2 dimenisonal array");
             return;
         }
-        int neighborCount = getNeighbors(array, distanceThreshold, flagCount, performTest);
+        int neighborCount = getNeighbors(arrayResults.array, distanceThreshold, arrayResults.flagCount, performTest);
         System.out.println("found neighbor count " + neighborCount);
         long endTime = System.nanoTime();
         long duration = endTime - startTime;
@@ -88,7 +100,10 @@ public class Neighbors {
      * Walks the square around the location of size distanceThreshold,
      * for 0 only the square itself
      * If Manhattan Distance of x,y from targetCol, targetRow > distanceThreshold skip
-     * uses a neighbors integer array to avoid duplicates and optimize searching
+     * Uses a neighbors integer array to avoid duplicates and optimize searching
+     * It checks the marked value of each square, and if the marked value > distanceRemaining
+     * then marked value -1 squares can be skipped.
+     * It marks entries with distanceRemaining so that future passes can skip
      * @param targetRow target location row
      * @param targetCol target location column
      * @param distanceThreshold the maximum Manhattan Distance to check 0 being self
@@ -110,9 +125,9 @@ public class Neighbors {
                 logger.debug("target " + targetRow + "," + targetCol + " checking " + row + "," + col + " distance " + manhattanDistance + " threshold " + distanceThreshold + " skip ? " + (manhattanDistance > distanceThreshold) + " neighborVal " + neighbors[row][col]);
                 if (manhattanDistance > distanceThreshold) continue;
                 int neighborVal = neighbors[row][col];
-                int newVal = distanceThreshold - manhattanDistance + 1;
-                if (neighborVal < newVal) {
-                    neighbors[row][col]=newVal;
+                int distanceRemaining = distanceThreshold - manhattanDistance + 1;
+                if (neighborVal < distanceRemaining) {
+                    neighbors[row][col]=distanceRemaining;
                     flaggedCount+= neighborVal == 0 ? 1 : 0;
                 }
                 else if (neighborVal > 1) {
@@ -121,6 +136,31 @@ public class Neighbors {
             }
         }
         return flaggedCount;
+    }
+
+    /**
+     * Executes an alternate method via shouldBeFlagged for calculating neighbors
+     * and compare to the flagged array
+     * builds a visualization string where
+     *  0 indicates a correctly non-flagged point
+     *  1 indicates an incorrectly flagged point
+     *  2 indicates an incorrectly non flagged point
+     *  3 indicates a correctly flagged point
+     * @param distanceThreshold the neighbor distance threshold
+     * @param neighbors the original 2d array of booleans
+     * @param flagged the calculated result
+     * @return boolean
+     */
+    private static int flagSearch(boolean[][] array, int distanceThreshold) {
+        StringBuilder sb = new StringBuilder();
+        boolean hasError = false;
+        int neighborCount = 0;
+        for (int row = 0; row < array.length; row++) {
+            for (int col = 0; col < array[row].length; col++) {
+                neighborCount += shouldBeFlagged(row, col, distanceThreshold, array) ? 1 : 0;
+            }
+        }
+        return neighborCount;
     }
 
     /**
@@ -175,30 +215,30 @@ public class Neighbors {
     }
 
     /**
-     * parses JsonArray into a standard array
+     * parses JsonArray into a standard array of booleans
      * Assumes the array is not jagged
-     * handles both floating point and integer values
-     *
+     * handles both floating point and integer values translating positive numbers into 1
+     * and non-positive numbers to 0
+     * maintains a count of found positive values in class variable flagCount
      * @param jsonArray the input two-dimensional JsonArray
      * @return a standard two-dimensional array of boolean
      * */
-    private static boolean[][] parseJsonArray(JsonArray jsonArray) {
+    private static ArrayParseResults parseJsonArray(JsonArray jsonArray) {
         logger.info("input data:\n" + jsonArray.toString().replaceAll("],", "],\n"));
         StringBuilder sb = new StringBuilder();
-        if (jsonArray.size()==0) return new boolean[0][0];
+        if (jsonArray.size()==0) return new ArrayParseResults(new boolean[0][0],0);
         int height = jsonArray.size();
         int width = jsonArray.getJsonArray(0).size();
-        boolean[][] array = new boolean[height][width];
-        flagCount = 0;
+        ArrayParseResults results = new ArrayParseResults(new boolean[height][width], 0);
         logger.info("parsing JSON array with height "+height+" width "+width);
         for (int row = 0; row <height; row++) {
             JsonArray rowData = jsonArray.getJsonArray(row);
             for (int col = 0; col < width; col++) {
-                array[row][col] = rowData.getJsonNumber(col).doubleValue() > 0;
-                flagCount+= array[row][col] ? 1 : 0;
+                results.array[row][col] = rowData.getJsonNumber(col).doubleValue() > 0;
+                results.flagCount+= results.array[row][col] ? 1 : 0;
             }
         }
-        return array;
+        return results;
     }
 
 
@@ -263,30 +303,5 @@ public class Neighbors {
             }
         }
         return false;
-    }
-
-    /**
-     * Executes an alternate method via shouldBeFlagged for calculating neighbors
-     * and compare to the flagged array
-     * builds a visualization string where
-     *  0 indicates a correctly non-flagged point
-     *  1 indicates an incorrectly flagged point
-     *  2 indicates an incorrectly non flagged point
-     *  3 indicates a correctly flagged point
-     * @param distanceThreshold the neighbor distance threshold
-     * @param neighbors the original 2d array of booleans
-     * @param flagged the calculated result
-     * @return boolean
-     */
-    private static int flagSearch(boolean[][] array, int distanceThreshold) {
-        StringBuilder sb = new StringBuilder();
-        boolean hasError = false;
-        int neighborCount = 0;
-        for (int row = 0; row < array.length; row++) {
-            for (int col = 0; col < array[row].length; col++) {
-                neighborCount += shouldBeFlagged(row, col, distanceThreshold, array) ? 1 : 0;
-            }
-        }
-        return neighborCount;
     }
 }
