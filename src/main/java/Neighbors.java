@@ -10,23 +10,31 @@ import javax.json.JsonReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Reads in an input array of numbers, and a distance threshold
+ * calculates the number of squares that are within Manhattan Distance
+ * of any positive values from the input array
+ * outputs the result to the console
+ */
 public class Neighbors {
 
+
+    private enum Density{ DENSE, SPARSE, TEST};
     private static Logger logger = LoggerFactory.getLogger(Neighbors.class);
     private static final String FIELD_DISTANCE_THRESHOLD = "distanceThreshold";
     private static final String FIELD_DATA = "data";
     private static final double DENSITY_TUNE_FACTOR = 5.0;
 
+    private record GridCoordinate(int row, int col) {}
     /**
-     * class for holding results of the array parse
+     * holds results of the array parse
      * we need to track
      * the values converted to boolean and a count of flags
      * the dense search is more optimal with a two dimensional array
      * the sparse search would be more optimal with a list of points
      * but the difference is negligible
      */
-    private record GridCoordinate(int row, int col) {}
-    private static class ArrayParseResults {
+    private static class FlagValues {
         public boolean[][] array;
         public ArrayList<GridCoordinate> flags;
         public int flagCount;
@@ -34,7 +42,7 @@ public class Neighbors {
         public final boolean useList;
         public final int rowCount;
         public final int colCount;
-        public ArrayParseResults(int rowCount, int colCount, boolean useArray, boolean useList) {
+        public FlagValues(int rowCount, int colCount, boolean useArray, boolean useList) {
             this.flags = new ArrayList<GridCoordinate>();
             this.array = new boolean[rowCount][colCount];
             this.useArray = useArray;
@@ -44,8 +52,12 @@ public class Neighbors {
             this.rowCount = rowCount;
         }
         public void addPoint(int row, int col) {
-            if (useList) flags.add(new GridCoordinate(row, col));
-            if (useArray) array[row][col] = true;
+            if (useList) {
+                flags.add(new GridCoordinate(row, col));
+            }
+            if (useArray) {
+                array[row][col] = true;
+            }
             flagCount++;
         }
     }
@@ -80,16 +92,18 @@ public class Neighbors {
         int distanceThreshold = jsonObject.getInt(FIELD_DISTANCE_THRESHOLD, -1);
         boolean performTest = System.getenv().getOrDefault("PERFORM_TEST", "false").equals("true");
         boolean assumeSparse = System.getenv().getOrDefault("ASSUME_SPARSE", "false").equals("true");
+        boolean assumeDense = System.getenv().getOrDefault("ASSUME_DENSE", "false").equals("true");
+        Density density = assumeSparse ? Density.SPARSE : assumeDense ? Density.DENSE : Density.TEST;
         JsonArray dataArray = jsonObject.getJsonArray(FIELD_DATA);
         logger.info("distance threshold: " + distanceThreshold);
-        ArrayParseResults flagData = parseJsonArray(dataArray, performTest || !assumeSparse, performTest || assumeSparse);
+        FlagValues flagData = parseJsonArray(dataArray, performTest || !assumeSparse, performTest || !assumeDense);
 
         if (flagData.array.length == 0 || distanceThreshold < 0) {
             System.out.println("please supply a JSON file with a 'distanceThreshold' " +
                     "integer >=0 and a 'data' 2 dimenisonal array");
             return;
         }
-        int neighborCount = getNeighbors(flagData, distanceThreshold, performTest, assumeSparse);
+        int neighborCount = getNeighbors(flagData, distanceThreshold, performTest, density);
         System.out.println("found neighbor count " + neighborCount);
         long endTime = System.nanoTime();
         long duration = endTime - startTime;
@@ -203,7 +217,7 @@ public class Neighbors {
      * @param distanceThreshold a number of Manhattan Distance steps to walk for neighbors
      * @return count of cells falling within distanceThreshold of true values in array
      */
-    private static int flagFill(ArrayParseResults flagData, int [][] neighbors, int distanceThreshold){
+    private static int flagFill(FlagValues flagData, int [][] neighbors, int distanceThreshold){
         int neighborCount = 0;
         for (int i = 0; i < flagData.flags.size(); i++) {
             neighborCount += flagNeighbors(flagData.flags.get(i).row, flagData.flags.get(i).col, distanceThreshold, neighbors);
@@ -222,14 +236,19 @@ public class Neighbors {
      * @param performTest if a validation test should be performed
      * @return count of cells falling within distanceThreshold of true values in array
      */
-    private static int getNeighbors(ArrayParseResults flagData, int distanceThreshold,
-                                    boolean performTest, boolean assumeSparse) {
+    private static int getNeighbors(FlagValues flagData, int distanceThreshold,
+                                    boolean performTest, Density density) {
         // generate a 2D array with the same dimensions to track
         int[][] neighbors = new int[flagData.rowCount][flagData.colCount];
         logger.info("input array:\n" + printArray(flagData.array));
-        
-        boolean isSparse = assumeSparse || !arrayIsDense(flagData.colCount * flagData.rowCount,
-                distanceThreshold, flagData.flagCount);
+        boolean isSparse;
+        if (density == density.TEST) {
+            isSparse = !arrayIsDense(flagData.colCount * flagData.rowCount,
+                    distanceThreshold, flagData.flagCount);
+        } else { // either sparse or dense
+            isSparse = density == Density.SPARSE;
+            logger.info ("assuming grid density is " + (isSparse ? "sparse" : "dense"));
+        }
         int neighborCount = isSparse ? flagFill(flagData, neighbors, distanceThreshold) : flagSearch(flagData.array, distanceThreshold);
         if (performTest) {
             logger.info("executing test");
@@ -252,15 +271,16 @@ public class Neighbors {
      * @param jsonArray the input two-dimensional JsonArray
      * @return a standard two-dimensional array of boolean
      * */
-    private static ArrayParseResults parseJsonArray(JsonArray jsonArray,
+    private static FlagValues parseJsonArray(JsonArray jsonArray,
                                                      boolean useArray, boolean useList) {
         logger.info("input data:\n" + jsonArray.toString().replaceAll("],", "],\n"));
         StringBuilder sb = new StringBuilder();
-        if (jsonArray.size()==0) return new ArrayParseResults(0,0,useArray, useList);
+        if (jsonArray.size()==0) return new FlagValues(0,0,useArray, useList);
         int rows = jsonArray.size();
         int cols = jsonArray.getJsonArray(0).size();
-        ArrayParseResults results = new ArrayParseResults(rows,cols, useArray, useList);
-        logger.info("parsing JSON array with rows "+rows+" cols "+cols);
+        FlagValues results = new FlagValues(rows,cols, useArray, useList);
+        logger.info("parsing JSON array with rows "+rows+" cols " + cols);
+        logger.debug("useArray: " + useArray + " useList: " + useList);
         for (int row = 0; row <rows; row++) {
             JsonArray rowData = jsonArray.getJsonArray(row);
             for (int col = 0; col < cols; col++) {
