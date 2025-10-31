@@ -15,10 +15,15 @@ public class Neighbors {
     private static Logger logger = LoggerFactory.getLogger(Neighbors.class);
     private static final String FIELD_DISTANCE_THRESHOLD = "distanceThreshold";
     private static final String FIELD_DATA = "data";
+    private static final double DENSITY_TUNE_FACTOR = 5.0;
 
     /**
      * class for holding results of the array parse
-     * we need to track 
+     * we need to track
+     * the values converted to boolean and a count of flags
+     * the dense search is more optimal with a two dimensional array
+     * the sparse search would be more optimal with a list of points
+     * but the difference is negligible
      */
     private static class ArrayParseResults {
         public boolean[][] array;
@@ -78,6 +83,12 @@ public class Neighbors {
     /**
      * calculates whether array is "dense" meaning many overlaps and a fill
      * approach is likely to be slower than searching for neighbors due to many overlaps
+     * the density of the grid is based on the neighbors by Manhattan Distance being an arithmetic series
+     * of 2 * distanceThreshold * (distanceThreshold +1 )
+     * a grid density of 1 implies in theory every cell could have a flagged neighbor if
+     * the flags were spaced evenly and none went off the grid
+     * we then apply a tuning factor based on the relative speed of our dense vs sparse algorithms
+     * to achieve best possible performance across varied grid densities
      * @param array a 2 dimensional array that is grid shaped with flagged values set to true
      * @param arrayFlagCount count of flagged values in array
      * @param distanceThreshold a number of Manhattan Distance steps to walk for neighbors
@@ -86,11 +97,15 @@ public class Neighbors {
     private static boolean arrayIsDense (boolean[][] array, int distanceThreshold, int arrayFlagCount) {
         int gridSize = array.length * array[0].length;
         double density = 1.0 * arrayFlagCount * 2 * distanceThreshold * (distanceThreshold +1 ) / gridSize ;
-        boolean isDense = density > distanceThreshold;
-        logger.info("density = arrayFlagCount * 2 * distanceThreshold * (distanceThreshold +1 ) / gridSize ");
-        logger.info("arrayFlagCount : " + arrayFlagCount + " distanceThreshold: " + distanceThreshold + " = "
-                + arrayFlagCount * distanceThreshold + " gridSize: " + gridSize);
+        boolean isDense = density > distanceThreshold * DENSITY_TUNE_FACTOR;
+        logger.info("distanceThreshold: " + distanceThreshold + " arrayFlagCount : " + arrayFlagCount
+                + " gridSize " + gridSize);
+        logger.info("theoretical best coverage = 2 * distanceThreshold * (distanceThreshold +1 )  " +
+                (2 * distanceThreshold * (distanceThreshold +1 ) ));
+        logger.info("density = coverage / gridSize ");
         logger.info("density: " + density);
+        logger.info("density threshold = distanceThreshold * DENSITY_TUNE_FACTOR = " + distanceThreshold +
+                " * " + DENSITY_TUNE_FACTOR + " = " + (distanceThreshold * DENSITY_TUNE_FACTOR));
         logger.info("isDense: " + isDense);
         return isDense;
     }
@@ -166,6 +181,27 @@ public class Neighbors {
     /**
      * find all neighbors of true values in 2 dimensional array within
      * distanceThreshold Manhattan Distance of a flagged (true) value
+     * by filling around every flag via flagNeighbors
+     * @param array a 2 dimensional array that is grid shaped with flagged values set to true
+     * @param neighbors a 2 dimensional array to track fills to avoid double counting
+     * @param distanceThreshold a number of Manhattan Distance steps to walk for neighbors
+     * @return count of cells falling within distanceThreshold of true values in array
+     */
+    private static int flagFill(boolean [][] array, int [][] neighbors, int distanceThreshold){
+        int neighborCount = 0;
+        for (int row = 0; row < array.length; row++) {
+            for (int col = 0; col < array[row].length; col++) {
+                if (array[row][col]) {
+                    neighborCount += flagNeighbors(row, col, distanceThreshold, neighbors);
+                }
+            }
+        }
+        return neighborCount;
+    }
+
+    /**
+     * find all neighbors of true values in 2 dimensional array within
+     * distanceThreshold Manhattan Distance of a flagged (true) value
      * for dense arrays search for flags from every point via flagSearch
      * for sparse arrays fill around every flag via flagFill
      * @param array a 2 dimensional array that is grid shaped with flagged values set to true
@@ -190,27 +226,6 @@ public class Neighbors {
             logger.info("Alternate Count: " + altCount);
         }
         logger.info("neighbors array:\n" + printArray(neighbors));
-        return neighborCount;
-    }
-
-    /**
-     * find all neighbors of true values in 2 dimensional array within
-     * distanceThreshold Manhattan Distance of a flagged (true) value
-     * by filling around every flag via flagFill
-     * @param array a 2 dimensional array that is grid shaped with flagged values set to true
-     * @param neighbors a 2 dimensional array to track fills to avoid double counting
-     * @param distanceThreshold a number of Manhattan Distance steps to walk for neighbors
-     * @return count of cells falling within distanceThreshold of true values in array
-     */
-    private static int flagFill(boolean [][] array, int [][] neighbors, int distanceThreshold){
-        int neighborCount = 0;
-        for (int row = 0; row < array.length; row++) {
-            for (int col = 0; col < array[row].length; col++) {
-                if (array[row][col]) {
-                    neighborCount += flagNeighbors(row, col, distanceThreshold, neighbors);
-                }
-            }
-        }
         return neighborCount;
     }
 
