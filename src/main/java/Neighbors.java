@@ -192,22 +192,37 @@ public class Neighbors {
         StringBuilder sb = new StringBuilder();
         boolean hasError = false;
         int neighborCount = 0;
+        for (int row = 0; row < array.length; row++) {
+            for (int col = 0; col < array[row].length; col++) {
+                if (array[row][col]) {
+                    neighbors[row][col] = distanceThreshold + 1;
+                    neighborCount++;
+                }
+            }
+        }
+        logger.info("initial array neighbor count "+ neighborCount);
         for (int i = distanceThreshold; i > 0; i--) {
-            neighborCount+= flagScanOne(array, neighbors, distanceThreshold);
+            neighborCount+= flagScanOne(neighbors, i);
+            logger.info("after scan neighbor count "+ neighborCount);
         }
         return neighborCount;
     }
 
-    private static int flagScanOne(boolean[][] array, int[][] neighbors, int distanceThreshold) {
+    private static int flagScanOne(int[][] neighbors, int distanceThreshold) {
         boolean hasError = false;
         int neighborCount = 0;
-        for (int row = 0; row < array.length; row++) {
-            for (int col = 0; col < array[row].length; col++) {
-                int newVal 
-                if (array[row][col]) {
-
+        for (int row = 0; row < neighbors.length; row++) {
+            for (int col = 0; col < neighbors[row].length; col++) {
+                int upVal = row > 0 ? neighbors[row-1][col] : 0;
+                int downVal = row < neighbors.length -1 ? neighbors[row+1][col] : 0;
+                int leftVal = col > 0 ? neighbors[row][col-1] : 0;
+                int rightVal = col < neighbors[row].length -1 ? neighbors[row][col+1] : 0;
+                int maxVal = Math.max(Math.max(upVal, downVal), Math.max(leftVal, rightVal));
+                int prevVal = neighbors[row][col];
+                if (maxVal -1 > prevVal) {
+                    neighbors[row][col] = maxVal-1;
+                    neighborCount+= prevVal == 0 ? 1 : 0;
                 }
-                neighborCount += shouldBeFlagged(row, col, distanceThreshold, array) ? 1 : 0;
             }
         }
         return neighborCount;
@@ -278,15 +293,12 @@ public class Neighbors {
             isSparse = density == Density.SPARSE;
             logger.info ("assuming grid density is " + (isSparse ? "sparse" : "dense"));
         }
-        int[][] neighbors;
-        if (isSparse || performTest) {
-            neighbors = new int[flagData.rowCount][flagData.colCount]
-        }
 
-        int neighborCount = isSparse ? flagFill(flagData, neighbors, distanceThreshold) : flagSearch(flagData.array, distanceThreshold);
+        int neighborCount = isSparse ? flagFill(flagData, neighbors, distanceThreshold) : flagScan(flagData.array, neighbors, distanceThreshold);
         if (performTest) {
             logger.info("executing test");
-            int altCount = isSparse ? flagSearch(flagData.array, distanceThreshold) : flagFill(flagData, neighbors, distanceThreshold);
+            neighbors = new int[flagData.rowCount][flagData.colCount];
+            int altCount = isSparse ? flagScan(flagData.array, neighbors, distanceThreshold) : flagFill(flagData, neighbors, distanceThreshold);
             if (altCount != neighborCount) {
                 logger.error("Primary " + neighborCount +" and Alternate " + altCount +" counts do not match");
             }
