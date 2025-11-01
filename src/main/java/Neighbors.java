@@ -192,10 +192,8 @@ public class Neighbors {
         StringBuilder sb = new StringBuilder();
         boolean hasError = false;
         int neighborCount = 0;
-        for (int row = 0; row < array.length; row++) {
-            for (int col = 0; col < array[row].length; col++) {
-                neighborCount += shouldBeFlagged(row, col, distanceThreshold, array) ? 1 : 0;
-            }
+        for (int i = distanceThreshold; i > 0; i--) {
+            neighborCount+= flagScanOne(array, neighbors, distanceThreshold);
         }
         return neighborCount;
     }
@@ -205,6 +203,10 @@ public class Neighbors {
         int neighborCount = 0;
         for (int row = 0; row < array.length; row++) {
             for (int col = 0; col < array[row].length; col++) {
+                int newVal 
+                if (array[row][col]) {
+
+                }
                 neighborCount += shouldBeFlagged(row, col, distanceThreshold, array) ? 1 : 0;
             }
         }
