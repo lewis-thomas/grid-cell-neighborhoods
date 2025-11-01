@@ -84,9 +84,8 @@ public class Neighbors {
                 (2 * distanceThreshold * (distanceThreshold +1 ) ));
         logger.info("density = coverage / gridSize ");
         logger.info("density: " + density);
-        logger.info("density threshold = DENSITY_TUNE_FACTOR = " +
-                DENSITY_TUNE_FACTOR + " = " );
-        logger.info("isDense: " + isDense);
+        logger.info("DENSITY_TUNE_FACTOR = " + DENSITY_TUNE_FACTOR);
+        logger.info("isDense: == density > DENSITY_TUNE_FACTOR: " + isDense);
         return isDense;
     }
 
