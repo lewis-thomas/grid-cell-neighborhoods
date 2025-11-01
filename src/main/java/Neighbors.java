@@ -68,6 +68,11 @@ public class Neighbors {
      * Parses the array to a grid of boolean values and calculates the number
      * of squares that are within Manhattan Distance of any positive values from the input array
      * outputs the result to the console
+     * Contains an algorithm optimized for sparse arrays and an algorithm optimized for dense arrays
+     * by default it will calculate which algorithm should be used. It is possible to force
+     * this function to use the sparse algorithm via ASSUME_SPARSE=true or the dense algorithm
+     * via ASSUME_DENSE=true
+     * If PERFORM_TEST=true the function will run both algorithms and confirm they generate the same result
      * @param args a string filename of a JSON file containing
      *             a "data" 2 dimensional array
      *             a "distanceThreshold" integer > 0
