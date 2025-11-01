@@ -15,9 +15,10 @@ class ScanFlagFill {
      * find all neighbors of true values in 2 dimensional array within
      * distanceThreshold Manhattan Distance of a flagged (true) value
      * by filling around every flag via flagNeighbors
-     * @param array a 2 dimensional array that is grid shaped with flagged values set to true
+     * @param flagData an object containing
+     *                grid coordinates of flagged values set to true
+     *                 distanceThreshold a number of Manhattan Distance steps to walk for neighbors
      * @param neighbors a 2 dimensional array to track fills to avoid double counting
-     * @param distanceThreshold a number of Manhattan Distance steps to walk for neighbors
      * @return count of cells falling within distanceThreshold of true values in array
      */
     public static int flagFill(FlagValues flagData, int [][] neighbors){

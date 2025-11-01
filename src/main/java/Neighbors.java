@@ -47,7 +47,7 @@ public class Neighbors {
             return;
         }
         boolean performTest = System.getenv().getOrDefault("PERFORM_TEST", "false").equals("true");
-        FlagValues flagData = GridReader.parseJsonNeighborData(jsonData, performTest);
+        FlagValues flagData = GridReader.parseJsonNeighborData(jsonData);
         if (flagData.distanceThreshold < 0) {
             System.out.println("please supply a JSON file with a 'distanceThreshold' " +
                     "integer >=0 and a 'data' 2 dimenisonal array");
@@ -70,9 +70,9 @@ public class Neighbors {
      * the flags were spaced evenly and none went off the grid
      * we then apply a tuning factor based on the relative speed of our dense vs sparse algorithms
      * to achieve best possible performance across varied grid densities
-     * @param array a 2 dimensional array that is grid shaped with flagged values set to true
-     * @param arrayFlagCount count of flagged values in array
+     * @param gridSize size of a 2 dimensional array with flagged values
      * @param distanceThreshold a number of Manhattan Distance steps to walk for neighbors
+     * @param arrayFlagCount count of flagged values in array
      * @return whether or not the array is considered dense
      */
     private static boolean arrayIsDense (int gridSize, int distanceThreshold, int arrayFlagCount) {
@@ -92,11 +92,17 @@ public class Neighbors {
     /**
      * find all neighbors of true values in 2 dimensional array within
      * distanceThreshold Manhattan Distance of a flagged (true) value
+     * the algorithm can be specified as part of the flag data, or
+     * determined by calling a function
      * for dense arrays search for flags from every point via flagSearch
      * for sparse arrays fill around every flag via flagFill
-     * @param array a 2 dimensional array that is grid shaped with flagged values set to true
-     * @param distanceThreshold a number of Manhattan Distance steps to walk for neighbors
-     * @param arrayFlagCount count of flagged values in array
+     * @param flagData contains
+     *                 a list of coordinates of flagged points
+     *                 distanceThreshold a number of Manhattan Distance steps to walk for neighbors
+     *                 density if we should use dense algorithm, sparse, or test
+     *                 colCount grid column length
+     *                 rowCount grid row length
+     *                 flagCount count of flagged values
      * @param performTest if a validation test should be performed
      * @return count of cells falling within distanceThreshold of true values in array
      */
@@ -130,7 +136,7 @@ public class Neighbors {
     }
 
     /**
-     * prints the array to a string as integers
+     * prints the array to a string as integers for visualization
      * Assumes the array is not jagged
      *
      * @param neighbors the two-dimensional int array

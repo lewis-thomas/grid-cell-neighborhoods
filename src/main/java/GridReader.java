@@ -18,7 +18,14 @@ class GridReader {
     private static final String FIELD_DATA = "data";
     private static final double DENSITY_TUNE_FACTOR = 5.0;
 
-    public static FlagValues parseJsonNeighborData(String jsonData, boolean performTest) {
+    /**
+     * reads jsonData string finding positive values and adding those coordinates
+     * into a FlagValues object
+     * @param jsonData
+     * @return a FlagValues object with grid dimensions, flag coordinates,
+     *  density, and distanceThreshold
+     */
+    public static FlagValues parseJsonNeighborData(String jsonData) {
         JsonReader jsonReader = Json.createReader(new StringReader(jsonData));
         JsonObject jsonObject = jsonReader.readObject();
         jsonReader.close();
@@ -26,25 +33,21 @@ class GridReader {
         String densityParam = jsonObject.getString(FIELD_DENSITY, "test");
         JsonArray dataArray = jsonObject.getJsonArray(FIELD_DATA);
         logger.info("distance threshold: " + distanceThreshold);
-        if (dataArray.size()==0) return new FlagValues(0,0,densityParam, distanceThreshold, performTest);
+        if (dataArray.size()==0) return new FlagValues(0,0,densityParam, distanceThreshold);
         int rows = dataArray.size();
         int cols = dataArray.getJsonArray(0).size();
-        FlagValues flagValues = new FlagValues(rows,cols, densityParam, distanceThreshold, performTest);
+        FlagValues flagValues = new FlagValues(rows,cols, densityParam, distanceThreshold);
 
         return parseJsonArray(dataArray, flagValues);
     }
     /**
      * parses JsonArray into FlagValues
      * Assumes the array is not jagged
-     * handles both floating point and integer values translating positive numbers into 1
-     * and non-positive numbers to 0
-     * maintains a count of found positive values in class variable flagCount
+     * handles both floating point and integer values
+     * adds positive value coordinates to a FlagValues object
      * @param jsonArray the input two-dimensional JsonArray
      * @param needsArray whether we need to transform input into a two-dimensional array for processing
-     * @return a FlagValues object that can contain
-     *  an array of flagged values or
-     *  a list of flagged value positions or
-     *  both
+     * @return a FlagValues object that contains flagged value positions
      * */
     private static FlagValues parseJsonArray(JsonArray jsonArray,
                                              FlagValues flagValues) {

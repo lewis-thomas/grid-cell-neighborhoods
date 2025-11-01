@@ -17,6 +17,7 @@ class ScanMultiPass {
      * For each flagged element we add a value distanceThreshold + 1 to the neighbors array
      * in the corresponding location
      * then we make repeated passes flagScanOne flagging all neighbors of flagged values
+     * If all values in the array flagged exit
      * @param flagData
      * @param neighbors
      * @param distanceThreshold
@@ -36,7 +37,7 @@ class ScanMultiPass {
         logger.info("initial array neighbor count "+ neighborCount);
         for (int i = flagData.distanceThreshold; i > 0; i--) {
             neighborCount+= flagScanOne(neighbors, i);
-            logger.info("after scan neighbor count "+ neighborCount);
+            logger.info("after scan " + (flagData.distanceThreshold - i + 1) + " neighbor count "+ neighborCount);
             if (neighborCount == gridSize) {
                 logger.info("all elements flagged, exiting");
                 break;
@@ -46,10 +47,11 @@ class ScanMultiPass {
     }
     /**
      * scan entire two dimensional array
-     * for each point check if there is a neighbor that is flagged
+     * for each point check if there is a neighbor that is flagged.
+     * Set the value of each cell to one less than the value of its largest neighbor
      * @param neighbors
      * @param distanceThreshold
-     * @return
+     * @return the amount of newly flagged cells
      */
     private static int flagScanOne(int[][] neighbors, int distanceThreshold) {
         boolean hasError = false;
