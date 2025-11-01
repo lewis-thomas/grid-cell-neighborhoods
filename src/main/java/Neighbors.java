@@ -48,7 +48,7 @@ public class Neighbors {
         }
         boolean performTest = System.getenv().getOrDefault("PERFORM_TEST", "false").equals("true");
         FlagValues flagData = GridReader.parseJsonNeighborData(jsonData, performTest);
-        if (flagData.array.length == 0 || flagData.distanceThreshold < 0) {
+        if (flagData.distanceThreshold < 0) {
             System.out.println("please supply a JSON file with a 'distanceThreshold' " +
                     "integer >=0 and a 'data' 2 dimenisonal array");
             return;
@@ -105,7 +105,6 @@ public class Neighbors {
                                     boolean performTest) {
         // generate a 2D array with the same dimensions to track
         int[][] neighbors = new int[flagData.rowCount][flagData.colCount];
-        logger.debug("input array:\n" + printArray(flagData.array));
         boolean isSparse;
         if (flagData.density == FlagValues.Density.TEST) {
             isSparse = !arrayIsDense(flagData.colCount * flagData.rowCount,
@@ -115,13 +114,13 @@ public class Neighbors {
             logger.info ("assuming grid density is " + (isSparse ? "sparse" : "dense"));
         }
 
-        int neighborCount = isSparse ? ScanFlagFill.flagFill(flagData, neighbors, flagData.distanceThreshold) :
-                ScanMultiPass.flagScan(flagData.array, neighbors, flagData.distanceThreshold);
+        int neighborCount = isSparse ? ScanFlagFill.flagFill(flagData, neighbors) :
+                ScanMultiPass.flagScan(flagData, neighbors);
         if (performTest) {
             logger.info("executing test");
             neighbors = new int[flagData.rowCount][flagData.colCount];
-            int altCount = isSparse ? ScanMultiPass.flagScan(flagData.array, neighbors, flagData.distanceThreshold) :
-                    ScanFlagFill.flagFill(flagData, neighbors, flagData.distanceThreshold);
+            int altCount = isSparse ? ScanMultiPass.flagScan(flagData, neighbors) :
+                    ScanFlagFill.flagFill(flagData, neighbors);
             if (altCount != neighborCount) {
                 logger.error("Primary " + neighborCount +" and Alternate " + altCount +" counts do not match");
             }
@@ -129,25 +128,6 @@ public class Neighbors {
         }
         logger.debug("neighbors array:\n" + printArray(neighbors));
         return neighborCount;
-    }
-
-    /**
-     * prints the array to a string as 1 or 0
-     * Assumes the array is not jagged
-     *
-     * @param neighbors the input two-dimensional boolean array
-     * @return a string of 0s and 1s with lines = row count, each lines length = col count
-     * */
-    private static String printArray(boolean[][] neighbors) {
-        StringBuilder sb = new StringBuilder();
-
-        for (int row = 0; row < neighbors.length; row++) {
-            for (int col = 0; col < neighbors[row].length; col++) {
-                sb.append (neighbors[row][col] ? "1" : "0");
-            }
-            sb.append("\n");
-        }
-        return sb.toString();
     }
 
     /**

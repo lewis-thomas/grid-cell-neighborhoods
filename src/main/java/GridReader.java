@@ -30,7 +30,6 @@ class GridReader {
         int rows = dataArray.size();
         int cols = dataArray.getJsonArray(0).size();
         FlagValues flagValues = new FlagValues(rows,cols, densityParam, distanceThreshold, performTest);
-        logger.debug("useArray: " + flagValues.useArray + " useList: " + flagValues.useList);
 
         return parseJsonArray(dataArray, flagValues);
     }

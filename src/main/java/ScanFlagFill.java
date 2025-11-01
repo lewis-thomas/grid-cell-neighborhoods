@@ -20,11 +20,12 @@ class ScanFlagFill {
      * @param distanceThreshold a number of Manhattan Distance steps to walk for neighbors
      * @return count of cells falling within distanceThreshold of true values in array
      */
-    public static int flagFill(FlagValues flagData, int [][] neighbors, int distanceThreshold){
+    public static int flagFill(FlagValues flagData, int [][] neighbors){
         logger.info("flagging with flag fill");
         int neighborCount = 0;
         for (int i = 0; i < flagData.flags.size(); i++) {
-            neighborCount += flagNeighbors(flagData.flags.get(i).row(), flagData.flags.get(i).col(), distanceThreshold, neighbors);
+            neighborCount += flagNeighbors(flagData.flags.get(i).row(),
+                    flagData.flags.get(i).col(), flagData.distanceThreshold, neighbors);
         }
         return neighborCount;
     }
