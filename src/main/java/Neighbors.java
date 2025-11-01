@@ -1,4 +1,4 @@
-package FlagNeighbors;
+package ManhattanDistance;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -134,70 +134,6 @@ public class Neighbors {
         return flaggedCount;
     }
 
-    private static int flagScan(boolean[][] array, int[][] neighbors, int distanceThreshold) {
-        StringBuilder sb = new StringBuilder();
-        boolean hasError = false;
-        int neighborCount = 0;
-        for (int row = 0; row < array.length; row++) {
-            for (int col = 0; col < array[row].length; col++) {
-                if (array[row][col]) {
-                    neighbors[row][col] = distanceThreshold + 1;
-                    neighborCount++;
-                }
-            }
-        }
-        logger.info("initial array neighbor count "+ neighborCount);
-        for (int i = distanceThreshold; i > 0; i--) {
-            neighborCount+= flagScanOne(neighbors, i);
-            logger.info("after scan neighbor count "+ neighborCount);
-        }
-        return neighborCount;
-    }
-
-    private static int flagScanOne(int[][] neighbors, int distanceThreshold) {
-        boolean hasError = false;
-        int neighborCount = 0;
-        for (int row = 0; row < neighbors.length; row++) {
-            for (int col = 0; col < neighbors[row].length; col++) {
-                int upVal = row > 0 ? neighbors[row-1][col] : 0;
-                int downVal = row < neighbors.length -1 ? neighbors[row+1][col] : 0;
-                int leftVal = col > 0 ? neighbors[row][col-1] : 0;
-                int rightVal = col < neighbors[row].length -1 ? neighbors[row][col+1] : 0;
-                int maxVal = Math.max(Math.max(upVal, downVal), Math.max(leftVal, rightVal));
-                int prevVal = neighbors[row][col];
-                if (maxVal -1 > prevVal) {
-                    neighbors[row][col] = maxVal-1;
-                    neighborCount+= prevVal == 0 ? 1 : 0;
-                }
-            }
-        }
-        return neighborCount;
-    }
-
-    /**
-     * Executes an alternate method via shouldBeFlagged for calculating neighbors
-     * and compare to the flagged array
-     * builds a visualization string where
-     *  0 indicates a correctly non-flagged point
-     *  1 indicates an incorrectly flagged point
-     *  2 indicates an incorrectly non flagged point
-     *  3 indicates a correctly flagged point
-     * @param distanceThreshold the neighbor distance threshold
-     * @param neighbors the original 2d array of booleans
-     * @param flagged the calculated result
-     * @return boolean
-     */
-    private static int flagSearch(boolean[][] array, int distanceThreshold) {
-        boolean hasError = false;
-        int neighborCount = 0;
-        for (int row = 0; row < array.length; row++) {
-            for (int col = 0; col < array[row].length; col++) {
-                neighborCount += shouldBeFlagged(row, col, distanceThreshold, array) ? 1 : 0;
-            }
-        }
-        return neighborCount;
-    }
-
     /**
      * find all neighbors of true values in 2 dimensional array within
      * distanceThreshold Manhattan Distance of a flagged (true) value
@@ -241,11 +177,11 @@ public class Neighbors {
         }
 
         int neighborCount = isSparse ? flagFill(flagData, neighbors, flagData.distanceThreshold) :
-                flagScan(flagData.array, neighbors, flagData.distanceThreshold);
+                ScanMultiPass.flagScan(flagData.array, neighbors, flagData.distanceThreshold);
         if (performTest) {
             logger.info("executing test");
             neighbors = new int[flagData.rowCount][flagData.colCount];
-            int altCount = isSparse ? flagScan(flagData.array, neighbors, flagData.distanceThreshold) :
+            int altCount = isSparse ? ScanMultiPass.flagScan(flagData.array, neighbors, flagData.distanceThreshold) :
                     flagFill(flagData, neighbors, flagData.distanceThreshold);
             if (altCount != neighborCount) {
                 logger.error("Primary " + neighborCount +" and Alternate " + altCount +" counts do not match");
@@ -292,30 +228,5 @@ public class Neighbors {
             sb.append("\n");
         }
         return sb.toString();
-    }
-
-    /**
-     * check if a target location should be flagged by walking Manhattan distance checking for
-     * a flag value
-     * we walk a grid, skipping elements outside Manhattan distance,
-     * checking all entries within Manhattan distance and exiting if we find a flag
-     * @param targetRow the target location row
-     * @param targetCol the target location column
-     * @param distanceThreshold the maximum distance to walk
-     * @param neighbors the grid of flagged values
-     * @return boolean whether the location should be flagged
-     */
-    private static boolean shouldBeFlagged(int targetRow, int targetCol, int distanceThreshold, boolean[][] neighbors) {
-        for (int y = Math.max(targetRow-distanceThreshold, 0); y < Math.min(neighbors.length, targetRow + distanceThreshold+1); y++) {
-            for (int x = Math.max(targetCol-distanceThreshold,0); x < Math.min(neighbors[y].length, targetCol + distanceThreshold+1); x++) {
-                int manhattanDistance = Math.abs(x-targetCol) + Math.abs(y-targetRow);
-                logger.debug("position " + x + " " + y + " distance " + manhattanDistance + " threshold " + distanceThreshold + " skip ? " + (manhattanDistance > distanceThreshold));
-                if (manhattanDistance > distanceThreshold) continue;
-                if (neighbors[y][x]) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 }

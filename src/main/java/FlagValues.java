@@ -1,4 +1,4 @@
-package FlagNeighbors;
+package ManhattanDistance;
 
 import java.util.ArrayList;
 
