@@ -7,6 +7,7 @@ class ScanMultiPass {
     private static Logger logger = LoggerFactory.getLogger(ScanMultiPass.class);
 
     public static int flagScan(boolean[][] array, int[][] neighbors, int distanceThreshold) {
+        logger.info("flagging with scan multipass");
         StringBuilder sb = new StringBuilder();
         boolean hasError = false;
         int neighborCount = 0;
