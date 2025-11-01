@@ -42,7 +42,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
-                    <mainClass>Neighbors</mainClass>
+                    <mainClass>FlagNeighbors.Neighbors</mainClass>
                 </configuration>
             </plugin>
         </plugins>
