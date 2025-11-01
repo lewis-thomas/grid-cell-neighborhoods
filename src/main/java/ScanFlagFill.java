@@ -3,6 +3,11 @@ package ManhattanDistance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * find all neighbors of true values in 2 dimensional array within
+ * distanceThreshold Manhattan Distance of a flagged (true) value
+ * by filling around every flag
+ */
 class ScanFlagFill {
 
     private static Logger logger = LoggerFactory.getLogger(ScanFlagFill.class);
