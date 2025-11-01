@@ -188,6 +188,29 @@ public class Neighbors {
         return flaggedCount;
     }
 
+    private static int flagScan(boolean[][] array, int[][] neighbors, int distanceThreshold) {
+        StringBuilder sb = new StringBuilder();
+        boolean hasError = false;
+        int neighborCount = 0;
+        for (int row = 0; row < array.length; row++) {
+            for (int col = 0; col < array[row].length; col++) {
+                neighborCount += shouldBeFlagged(row, col, distanceThreshold, array) ? 1 : 0;
+            }
+        }
+        return neighborCount;
+    }
+
+    private static int flagScanOne(boolean[][] array, int[][] neighbors, int distanceThreshold) {
+        boolean hasError = false;
+        int neighborCount = 0;
+        for (int row = 0; row < array.length; row++) {
+            for (int col = 0; col < array[row].length; col++) {
+                neighborCount += shouldBeFlagged(row, col, distanceThreshold, array) ? 1 : 0;
+            }
+        }
+        return neighborCount;
+    }
+
     /**
      * Executes an alternate method via shouldBeFlagged for calculating neighbors
      * and compare to the flagged array
@@ -202,7 +225,6 @@ public class Neighbors {
      * @return boolean
      */
     private static int flagSearch(boolean[][] array, int distanceThreshold) {
-        StringBuilder sb = new StringBuilder();
         boolean hasError = false;
         int neighborCount = 0;
         for (int row = 0; row < array.length; row++) {
@@ -244,6 +266,7 @@ public class Neighbors {
     private static int getNeighbors(FlagValues flagData, int distanceThreshold,
                                     boolean performTest, Density density) {
         // generate a 2D array with the same dimensions to track
+        int[][] neighbors = new int[flagData.rowCount][flagData.colCount];
         logger.info("input array:\n" + printArray(flagData.array));
         boolean isSparse;
         if (density == density.TEST) {
@@ -253,10 +276,11 @@ public class Neighbors {
             isSparse = density == Density.SPARSE;
             logger.info ("assuming grid density is " + (isSparse ? "sparse" : "dense"));
         }
-        int[][] neighbors = null;
-        if (isSparse || performTest) { // only create the grid if we use it
-            neighbors = new int[flagData.rowCount][flagData.colCount];
+        int[][] neighbors;
+        if (isSparse || performTest) {
+            neighbors = new int[flagData.rowCount][flagData.colCount]
         }
+
         int neighborCount = isSparse ? flagFill(flagData, neighbors, distanceThreshold) : flagSearch(flagData.array, distanceThreshold);
         if (performTest) {
             logger.info("executing test");
@@ -328,8 +352,6 @@ public class Neighbors {
      * @return a string of integers with lines = row count, each lines length = col count
      * */
     private static String printArray(int[][] neighbors) {
-        if (neighbors == null) return "[null]";
-
         StringBuilder sb = new StringBuilder();
 
         for (int row = 0; row < neighbors.length; row++) {
