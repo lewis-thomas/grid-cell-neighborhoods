@@ -7,10 +7,13 @@ import org.slf4j.LoggerFactory;
  * find all neighbors of true values in 2 dimensional array within
  * distanceThreshold Manhattan Distance of a flagged (true) value
  * by filling around every flag
+ * optimized for sparse arrays because it only does calculations for
+ * flagged values rather than the entire array
  */
 class ScanFlagFill {
 
     private static Logger logger = LoggerFactory.getLogger(ScanFlagFill.class);
+
     /**
      * find all neighbors of true values in 2 dimensional array within
      * distanceThreshold Manhattan Distance of a flagged (true) value
@@ -39,7 +42,7 @@ class ScanFlagFill {
      * Uses a neighbors integer array to avoid duplicates and optimize searching
      * It checks the marked value of each square, and if the marked value > distanceRemaining
      * then marked value -1 squares can be skipped.
-     * It marks entries with distanceRemaining so that future passes can skip
+     * It marks entries with distanceRemaining so that passes of nearby neighbors can skip
      * @param targetRow target location row
      * @param targetCol target location column
      * @param distanceThreshold the maximum Manhattan Distance to check 0 being self

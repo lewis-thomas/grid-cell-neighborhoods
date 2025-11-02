@@ -34,11 +34,8 @@ class GridReader {
         JsonArray dataArray = jsonObject.getJsonArray(FIELD_DATA);
         logger.info("distance threshold: " + distanceThreshold);
         if (dataArray.size()==0) return new FlagValues(0,0,densityParam, distanceThreshold);
-        int rows = dataArray.size();
-        int cols = dataArray.getJsonArray(0).size();
-        FlagValues flagValues = new FlagValues(rows,cols, densityParam, distanceThreshold);
 
-        return parseJsonArray(dataArray, flagValues);
+        return parseJsonArray(dataArray, densityParam, distanceThreshold);
     }
     /**
      * parses JsonArray into FlagValues
@@ -46,11 +43,16 @@ class GridReader {
      * handles both floating point and integer values
      * adds positive value coordinates to a FlagValues object
      * @param jsonArray the input two-dimensional JsonArray
-     * @param needsArray whether we need to transform input into a two-dimensional array for processing
-     * @return a FlagValues object that contains flagged value positions
+     * @param densityParam treat data as dense (many flags), sparse, or test
+     * @param distanceThreshold the amount to walk to find neighbors
+     * @return a FlagValues object that contains flagged value positions, density, distanceThreshold
      * */
     private static FlagValues parseJsonArray(JsonArray jsonArray,
-                                             FlagValues flagValues) {
+                                             int densityParam, int distanceThreshold) {
+        int rows = dataArray.size();
+        int cols = dataArray.getJsonArray(0).size();
+        FlagValues flagValues = new FlagValues(rows, cols, densityParam, distanceThreshold);
+
         logger.debug("input data:\n" + jsonArray.toString().replaceAll("],", "],\n"));
         StringBuilder sb = new StringBuilder();
         logger.info("parsing JSON array with rows "+ flagValues.rowCount + " cols " + flagValues.colCount);

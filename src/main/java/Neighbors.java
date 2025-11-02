@@ -21,7 +21,7 @@ public class Neighbors {
     /**
      * Reads in an input array of numbers, and a distance threshold,
      * uses env variable performTest to determine whether to validate results
-     * Parses the array to a grid of boolean values and calculates the number
+     * Parses the array to boolean values and calculates the number
      * of squares that are within Manhattan Distance of any positive values from the input array
      * outputs the result to the console
      * Contains an algorithm optimized for sparse arrays and an algorithm optimized for dense arrays
@@ -35,7 +35,8 @@ public class Neighbors {
     public static void main(String[] args) {
         long startTime = System.nanoTime();
         if (args.length == 0) {
-            System.out.println("Please enter a JSON file path with neighbor data");
+            System.out.println("Please enter a JSON file path with a 'distanceThreshold'" +
+                    "integer >=0 and a 'data' 2 dimenisonal array");
             return;
         }
         String filePath = args[0];
@@ -96,6 +97,8 @@ public class Neighbors {
      * determined by calling a function
      * for dense arrays search for flags from every point via flagSearch
      * for sparse arrays fill around every flag via flagFill
+     * both algorithms use a two dimensional array of integers to track progress and
+     * avoid double counting
      * @param flagData contains
      *                 a list of coordinates of flagged points
      *                 distanceThreshold a number of Manhattan Distance steps to walk for neighbors
@@ -108,13 +111,12 @@ public class Neighbors {
      */
     private static int getNeighbors(FlagValues flagData,
                                     boolean performTest) {
-        // generate a 2D array with the same dimensions to track
         int[][] neighbors = new int[flagData.rowCount][flagData.colCount];
         boolean isSparse;
         if (flagData.density == FlagValues.Density.TEST) {
             isSparse = !arrayIsDense(flagData.colCount * flagData.rowCount,
                     flagData.distanceThreshold, flagData.flagCount);
-        } else { // either sparse or dense
+        } else {
             isSparse = flagData.density == FlagValues.Density.SPARSE;
             logger.info ("assuming grid density is " + (isSparse ? "sparse" : "dense"));
         }

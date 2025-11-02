@@ -4,9 +4,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *  * find all neighbors of true values in 2 dimensional array within
- *  * distanceThreshold Manhattan Distance of a flagged (true) value
- *  * by making a series of scans flagging every square next to a flagged value
+ *  find all neighbors of true values in 2 dimensional array within
+ *  distanceThreshold Manhattan Distance of a flagged (true) value
+ *  by making a series of scans flagging every square next to a flagged value
+ *  optimized for non sparse arrays because it operates against the entire array
+ *  rather than individual flags
  */
 class ScanMultiPass {
     private static Logger logger = LoggerFactory.getLogger(ScanMultiPass.class);
