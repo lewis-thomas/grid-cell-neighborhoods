@@ -47,8 +47,8 @@ class ScanMultiPass {
     }
     /**
      * scan entire two dimensional array
-     * for each point check if there is a neighbor that is flagged.
-     * Set the value of each cell to one less than the value of its largest neighbor
+     * for each point if it does not have value set check if there is a neighbor that is flagged.
+     * Set the value of each cell to one less than the value of its neighbor
      * @param neighbors
      * @param distanceThreshold
      * @return the amount of newly flagged cells
@@ -58,16 +58,13 @@ class ScanMultiPass {
         int neighborCount = 0;
         for (int row = 0; row < neighbors.length; row++) {
             for (int col = 0; col < neighbors[row].length; col++) {
-                int upVal = row > 0 ? neighbors[row-1][col] : 0;
-                int downVal = row < neighbors.length -1 ? neighbors[row+1][col] : 0;
-                int leftVal = col > 0 ? neighbors[row][col-1] : 0;
-                int rightVal = col < neighbors[row].length -1 ? neighbors[row][col+1] : 0;
-                int maxVal = Math.max(Math.max(upVal, downVal), Math.max(leftVal, rightVal));
-                int prevVal = neighbors[row][col];
-                if (maxVal -1 > prevVal) {
-                    neighbors[row][col] = maxVal-1;
-                    neighborCount+= prevVal == 0 ? 1 : 0;
-                }
+                if (neighbors[row][col] > distanceThreshold) continue;
+                boolean neighborFound = (row > 0 && neighbors[row-1][col] == distanceThreshold + 1) ||
+                        (row < neighbors.length -1 && neighbors[row+1][col] == distanceThreshold + 1) ||
+                        (col > 0 && neighbors[row][col-1] == distanceThreshold + 1) ||
+                        (col < neighbors[row].length -1 && neighbors[row][col+1]  == distanceThreshold + 1);
+                neighbors[row][col] = neighborFound ? distanceThreshold : 0;
+                neighborCount += neighborFound ? 1 : 0;
             }
         }
         return neighborCount;
