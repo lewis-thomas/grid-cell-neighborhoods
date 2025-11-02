@@ -20,12 +20,12 @@ class ScanFlagFill {
      * by filling around every flag via flagNeighbors
      * @param flagData an object containing
      *                grid coordinates of flagged values set to true
-     *                 distanceThreshold a number of Manhattan Distance steps to walk for neighbors
-     * @param neighbors a 2 dimensional array to track fills to avoid double counting
+     *                distanceThreshold a number of Manhattan Distance steps to walk for neighbors
      * @return count of cells falling within distanceThreshold of true values in array
      */
-    public static int flagFill(FlagValues flagData, int [][] neighbors){
+    public static int flagFill(FlagValues flagData){
         logger.info("flagging with flag fill");
+        int[][] neighbors = new int[flagData.rowCount][flagData.colCount];
         int neighborCount = 0;
         for (int i = 0; i < flagData.flags.size(); i++) {
             neighborCount += flagNeighbors(flagData.flags.get(i).row(),

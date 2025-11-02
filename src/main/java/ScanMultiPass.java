@@ -20,13 +20,14 @@ class ScanMultiPass {
      * in the corresponding location
      * then we make repeated passes flagScanOne flagging all neighbors of flagged values
      * If all values in the array flagged exit
-     * @param flagData
-     * @param neighbors
-     * @param distanceThreshold
-     * @return
+     * @param flagData an object containing
+     *                grid coordinates of flagged values set to true
+     *                distanceThreshold a number of Manhattan Distance steps to walk for neighbors
+     * @return count of all neighbors within distanceThreshold Manhattan Distance of a flagged (true) value
      */
-    public static int flagScan(FlagValues flagData, int[][] neighbors) {
+    public static int flagScan(FlagValues flagData) {
         logger.info("flagging with scan multipass");
+        int[][] neighbors = new int[flagData.rowCount][flagData.colCount];
         StringBuilder sb = new StringBuilder();
         boolean hasError = false;
         int neighborCount = 0;
@@ -37,9 +38,11 @@ class ScanMultiPass {
         neighborCount = flagData.flags.size();
 
         logger.info("initial array neighbor count "+ neighborCount);
+        logger.debug(GridPrint.printArray(neighbors));
         for (int i = flagData.distanceThreshold; i > 0; i--) {
             neighborCount+= flagScanOne(neighbors, i);
             logger.info("after scan " + (flagData.distanceThreshold - i + 1) + " neighbor count "+ neighborCount);
+            logger.debug(GridPrint.printArray(neighbors));
             if (neighborCount == gridSize) {
                 logger.info("all elements flagged, exiting");
                 break;
@@ -51,8 +54,8 @@ class ScanMultiPass {
      * scan entire two dimensional array
      * for each point if it does not have value set check if there is a neighbor that is flagged.
      * Set the value of each cell to one less than the value of its neighbor
-     * @param neighbors
-     * @param distanceThreshold
+     * @param neighbors the grid used for tracking what is getting set to true
+     * @param distanceThreshold the maximum Manhattan Distance to check 0 being self
      * @return the amount of newly flagged cells
      */
     private static int flagScanOne(int[][] neighbors, int distanceThreshold) {

@@ -111,7 +111,6 @@ public class Neighbors {
      */
     private static int getNeighbors(FlagValues flagData,
                                     boolean performTest) {
-        int[][] neighbors = new int[flagData.rowCount][flagData.colCount];
         boolean isSparse;
         if (flagData.density == FlagValues.Density.TEST) {
             isSparse = !arrayIsDense(flagData.colCount * flagData.rowCount,
@@ -121,38 +120,17 @@ public class Neighbors {
             logger.info ("assuming grid density is " + (isSparse ? "sparse" : "dense"));
         }
 
-        int neighborCount = isSparse ? ScanFlagFill.flagFill(flagData, neighbors) :
-                ScanMultiPass.flagScan(flagData, neighbors);
+        int neighborCount = isSparse ? ScanFlagFill.flagFill(flagData) :
+                ScanMultiPass.flagScan(flagData);
         if (performTest) {
             logger.info("executing test");
-            neighbors = new int[flagData.rowCount][flagData.colCount];
-            int altCount = isSparse ? ScanMultiPass.flagScan(flagData, neighbors) :
-                    ScanFlagFill.flagFill(flagData, neighbors);
+            int altCount = isSparse ? ScanMultiPass.flagScan(flagData) :
+                    ScanFlagFill.flagFill(flagData);
             if (altCount != neighborCount) {
                 logger.error("Primary " + neighborCount +" and Alternate " + altCount +" counts do not match");
             }
             logger.info("Alternate Count: " + altCount);
         }
-        logger.debug("neighbors array:\n" + printArray(neighbors));
         return neighborCount;
-    }
-
-    /**
-     * prints the array to a string as integers for visualization
-     * Assumes the array is not jagged
-     *
-     * @param neighbors the two-dimensional int array
-     * @return a string of integers with lines = row count, each lines length = col count
-     * */
-    private static String printArray(int[][] neighbors) {
-        StringBuilder sb = new StringBuilder();
-
-        for (int row = 0; row < neighbors.length; row++) {
-            for (int col = 0; col < neighbors[row].length; col++) {
-                sb.append ("" + neighbors[row][col]);
-            }
-            sb.append("\n");
-        }
-        return sb.toString();
     }
 }

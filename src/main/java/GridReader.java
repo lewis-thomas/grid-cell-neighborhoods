@@ -48,9 +48,9 @@ class GridReader {
      * @return a FlagValues object that contains flagged value positions, density, distanceThreshold
      * */
     private static FlagValues parseJsonArray(JsonArray jsonArray,
-                                             int densityParam, int distanceThreshold) {
-        int rows = dataArray.size();
-        int cols = dataArray.getJsonArray(0).size();
+                                             String densityParam, int distanceThreshold) {
+        int rows = jsonArray.size();
+        int cols = jsonArray.getJsonArray(0).size();
         FlagValues flagValues = new FlagValues(rows, cols, densityParam, distanceThreshold);
 
         logger.debug("input data:\n" + jsonArray.toString().replaceAll("],", "],\n"));
