@@ -60,6 +60,11 @@ public class Neighbors {
         long duration = endTime - startTime;
         long durationMillis = duration / 1_000_000;
         System.out.println("elapsed time in ms:" + durationMillis);
+        long totalMemory = Runtime.getRuntime().totalMemory(); // Total memory allocated to the JVM
+        long freeMemory = Runtime.getRuntime().freeMemory();   // Free memory within the allocated JVM space
+        long usedMemory = totalMemory - freeMemory;             // Used memory within the allocated JVM space
+        System.out.println("totalMemory: " + totalMemory);
+        System.out.println("usedMemory: " + usedMemory);
     }
 
     /**
@@ -121,7 +126,7 @@ public class Neighbors {
         }
 
         int neighborCount = isSparse ? ScanFlagFill.flagFill(flagData) :
-                ScanMultiPass.flagScan(flagData);
+                ScanMultiPass.flagScan(flagData, 500);
         if (performTest) {
             logger.info("executing test");
             int altCount = isSparse ? ScanMultiPass.flagScan(flagData) :

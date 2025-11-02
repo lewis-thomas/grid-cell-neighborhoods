@@ -4,7 +4,7 @@ package ManhattanDistance;
  * visualization helper - prints of grid to console
  */
 class GridPrint {
-    
+
     /**
      * prints the array to a string as integers for visualization
      * Assumes the array is not jagged
