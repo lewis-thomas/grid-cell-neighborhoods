@@ -6,6 +6,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.HashSet;
 
 /**
  * Reads in an input array of numbers, and a distance threshold
@@ -39,7 +40,15 @@ public class Neighbors {
                     "integer >=0 and a 'data' 2 dimenisonal array");
             return;
         }
+        int argCount = args.length;
         String filePath = args[0];
+        logger.debug("argCount " + argCount);
+        HashSet<String> argSet = new HashSet<>();
+        for (int i = 0; i < argCount; i++) {
+            argSet.add(args[i]);
+        }
+        boolean performTest = argSet.contains("-perform_test");
+
         String jsonData = null;
         try {
             jsonData = Files.readString(Paths.get(filePath));
@@ -47,7 +56,6 @@ public class Neighbors {
             System.out.println("Error reading file: " + e.getMessage());
             return;
         }
-        boolean performTest = System.getenv().getOrDefault("PERFORM_TEST", "false").equals("true");
         FlagValues flagData = GridReader.parseJsonNeighborData(jsonData);
         if (flagData.distanceThreshold < 0) {
             System.out.println("please supply a JSON file with a 'distanceThreshold' " +
@@ -60,6 +68,11 @@ public class Neighbors {
         long duration = endTime - startTime;
         long durationMillis = duration / 1_000_000;
         System.out.println("elapsed time in ms:" + durationMillis);
+        long totalMemory = Runtime.getRuntime().totalMemory(); // Total memory allocated to the JVM
+        long freeMemory = Runtime.getRuntime().freeMemory();   // Free memory within the allocated JVM space
+        long usedMemory = totalMemory - freeMemory;             // Used memory within the allocated JVM space
+        System.out.println("totalMemory: " + totalMemory);
+        System.out.println("usedMemory: " + usedMemory);
     }
 
     /**
