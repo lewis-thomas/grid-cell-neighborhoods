@@ -16,22 +16,31 @@ class ScanMultiPass {
     private static Logger logger = LoggerFactory.getLogger(ScanMultiPass.class);
     private record ScanRowsResult(int neighborCount, int flagIndex) {}
 
+    /**
+     *  runs and returns data from either the standard flagScan algorithm
+     *  or one optimized to save memory by operating in chunks
+     * @param flagData an object containing
+     *                grid coordinates of flagged values set to true
+     *                distanceThreshold a number of Manhattan Distance steps to walk for neighbors
+     * @param memSaver whetheer to run the memory saving version
+     * @return result of either the base flagScan or memory saving version
+     */
     public static int flagScan(FlagValues flagData, boolean memSaver) {
         return memSaver ? flagScan(flagData, MEM_SAVER_ROWS) : flagScan (flagData);
     }
 
-        /**
-         * Find all neighbors of true values in 2 dimensional array within
-         * distanceThreshold Manhattan Distance of a flagged (true) value
-         * For each flagged element we add a value distanceThreshold + 1 to the neighbors array
-         * in the corresponding location
-         * then we make repeated passes flagScanOne flagging all neighbors of flagged values
-         * If all values in the array flagged exit
-         * @param flagData an object containing
-         *                grid coordinates of flagged values set to true
-         *                distanceThreshold a number of Manhattan Distance steps to walk for neighbors
-         * @return count of all neighbors within distanceThreshold Manhattan Distance of a flagged (true) value
-         */
+    /**
+     * Find all neighbors of true values in 2 dimensional array within
+     * distanceThreshold Manhattan Distance of a flagged (true) value
+     * For each flagged element we add a value distanceThreshold + 1 to the neighbors array
+     * in the corresponding location
+     * then we make repeated passes flagScanOne flagging all neighbors of flagged values
+     * If all values in the array flagged exit
+     * @param flagData an object containing
+     *                grid coordinates of flagged values set to true
+     *                distanceThreshold a number of Manhattan Distance steps to walk for neighbors
+     * @return count of all neighbors within distanceThreshold Manhattan Distance of a flagged (true) value
+     */
     public static int flagScan(FlagValues flagData) {
         logger.info("flagging with scan multipass");
         int[][] neighbors = new int[flagData.rowCount][flagData.colCount];
@@ -61,13 +70,15 @@ class ScanMultiPass {
     /**
      * Find all neighbors of true values in 2 dimensional array within
      * distanceThreshold Manhattan Distance of a flagged (true) value
-     * For each flagged element we add a value distanceThreshold + 1 to the neighbors array
-     * in the corresponding location
-     * then we make repeated passes flagScanOne flagging all neighbors of flagged values
-     * If all values in the array flagged exit
+     * saves memory by not holding the entire data set in memory but makes a smaller array and works
+     * in chunks. To ensure that the bottom rows in one chunk are
+     * flagged by the top rows in the next chunk
+     * we calculate extra rows equal to the distanceThreshold and discard them
      * @param flagData an object containing
      *                grid coordinates of flagged values set to true
      *                distanceThreshold a number of Manhattan Distance steps to walk for neighbors
+     * @param maxRows the row size of the array used for calculations. Saves memory by only working
+     *                with a portion of the data at a time
      * @return count of all neighbors within distanceThreshold Manhattan Distance of a flagged (true) value
      */
     public static int flagScan(FlagValues flagData, int maxRows) {
@@ -88,7 +99,6 @@ class ScanMultiPass {
                 logger.debug("neighborCount after neighborShift " + neighborCount);
             }
             int curMaxRows = Math.min(maxRowsForGrid, flagData.rowCount - startRow + neighborOffset);
-//            int lastNonDiscardedRow = Math.max(curMaxRows, maxRowsForGrid) + startRow;
             int lastNonDiscardedRow = startRow + maxRowsForGrid - flagData.distanceThreshold - neighborOffset -1;
             logger.debug("calling flagScanRows: flagData.rowCount =" + flagData.rowCount +
                     " startRow = " + startRow + " maxRows = " + curMaxRows +
@@ -107,13 +117,76 @@ class ScanMultiPass {
     }
 
     /**
-     * iterate the flagData flags for startRow through endRow
-     * @param flagData
-     * @param neighbors
-     * @param startRow
-     * @param endRow
-     * @param flagStartIndex
-     * @return
+     * scan entire two dimensional array
+     * for each point if it does not have value set check if there is a neighbor that is flagged.
+     * Set the value of each cell to one less than the value of its neighbor
+     * @param neighbors the grid used for tracking what is getting set to true
+     * @param distanceThreshold the maximum Manhattan Distance to check 0 being self
+     * @return the amount of newly flagged cells
+     */
+    private static int flagScanOne(int[][] neighbors, int distanceThreshold) {
+        boolean hasError = false;
+        int neighborCount = 0;
+        for (int row = 0; row < neighbors.length; row++) {
+            for (int col = 0; col < neighbors[row].length; col++) {
+                if (neighbors[row][col] > distanceThreshold) continue;
+                boolean neighborFound = (row > 0 && neighbors[row-1][col] == distanceThreshold + 1) ||
+                        (row < neighbors.length -1 && neighbors[row+1][col] == distanceThreshold + 1) ||
+                        (col > 0 && neighbors[row][col-1] == distanceThreshold + 1) ||
+                        (col < neighbors[row].length -1 && neighbors[row][col+1]  == distanceThreshold + 1);
+                neighbors[row][col] = neighborFound ? distanceThreshold : 0;
+                neighborCount += neighborFound ? 1 : 0;
+            }
+        }
+        return neighborCount;
+    }
+
+    /**
+     * scan entire two dimensional array
+     * for each point if it does not have value set check if there is a neighbor that is flagged.
+     * Set the value of each cell to one less than the value of its neighbor
+     * @param neighbors the grid used for tracking what is getting set to true
+     * @param distanceThreshold the maximum Manhattan Distance to check 0 being self
+     * @param rowCount because the neighbors array rows could be larger than the dataset we use this
+     * @return the amount of newly flagged cells
+     */
+    private static int flagScanOneForRows(int[][] neighbors, int distanceThreshold, int rowCount) {
+        boolean hasError = false;
+        int neighborCount = 0;
+        logger.debug("flagScanOneForRows rowCount " + rowCount);
+        for (int row = 0; row < rowCount; row++) {
+            for (int col = 0; col < neighbors[row].length; col++) {
+                if (neighbors[row][col] > distanceThreshold) continue;
+                boolean neighborFound = (row > 0 && neighbors[row-1][col] == distanceThreshold + 1) ||
+                        (row < neighbors.length -1 && neighbors[row+1][col] == distanceThreshold + 1) ||
+                        (col > 0 && neighbors[row][col-1] == distanceThreshold + 1) ||
+                        (col < neighbors[row].length -1 && neighbors[row][col+1]  == distanceThreshold + 1);
+                int prevVal = neighbors[row][col];
+                neighbors[row][col] = neighborFound ? distanceThreshold : prevVal;
+                neighborCount += neighborFound && prevVal == 0 ? 1 : 0;
+            }
+        }
+        return neighborCount;
+    }
+
+    /**
+     * Find all neighbors of true values in 2 dimensional array within
+     * distanceThreshold Manhattan Distance of a flagged (true) value
+     * For each flagged element add a value distanceThreshold + 1 to the neighbors array
+     * in the corresponding location
+     * then make repeated passes flagScanOneForRows flagging all neighbors of flagged values
+     * If all values in the array flagged exit
+     * @param flagData an object containing
+     *                grid coordinates of flagged values set to true
+     *                distanceThreshold a number of Manhattan Distance steps to walk for neighbors
+     * @param neighbors the grid used for tracking what is getting set to true
+     * @param startRow the first grid index
+     * @param neighborOffset an offset for chunks after the first to space down so that previous flags
+     *                       can propagate downward
+     * @param rowCount the amount of rows to work against
+     * @param flagStartIndex where to start on our list of flags
+     * @return a ScanRowsResult object containing flags found and how far to advance the flagIndex
+     *                       tracking the last processed flag coordinate
      */
     private static ScanRowsResult flagScanRows(FlagValues flagData,
                                                int[][] neighbors,
@@ -158,63 +231,15 @@ class ScanMultiPass {
     }
 
     /**
-     * scan entire two dimensional array
-     * for each point if it does not have value set check if there is a neighbor that is flagged.
-     * Set the value of each cell to one less than the value of its neighbor
-     * @param neighbors the grid used for tracking what is getting set to true
-     * @param distanceThreshold the maximum Manhattan Distance to check 0 being self
-     * @return the amount of newly flagged cells
-     */
-    private static int flagScanOne(int[][] neighbors, int distanceThreshold) {
-        boolean hasError = false;
-        int neighborCount = 0;
-        for (int row = 0; row < neighbors.length; row++) {
-            for (int col = 0; col < neighbors[row].length; col++) {
-                if (neighbors[row][col] > distanceThreshold) continue;
-                boolean neighborFound = (row > 0 && neighbors[row-1][col] == distanceThreshold + 1) ||
-                        (row < neighbors.length -1 && neighbors[row+1][col] == distanceThreshold + 1) ||
-                        (col > 0 && neighbors[row][col-1] == distanceThreshold + 1) ||
-                        (col < neighbors[row].length -1 && neighbors[row][col+1]  == distanceThreshold + 1);
-                neighbors[row][col] = neighborFound ? distanceThreshold : 0;
-                neighborCount += neighborFound ? 1 : 0;
-            }
-        }
-        return neighborCount;
-    }
-
-    /**
-     * scan entire two dimensional array
-     * for each point if it does not have value set check if there is a neighbor that is flagged.
-     * Set the value of each cell to one less than the value of its neighbor
-     * @param neighbors the grid used for tracking what is getting set to true
-     * @param distanceThreshold the maximum Manhattan Distance to check 0 being self
-     * @param firstPass flag for if we are on the first pass otherwise the top row is already populated
-     * @return the amount of newly flagged cells
-     */
-    private static int flagScanOneForRows(int[][] neighbors, int distanceThreshold, int rowCount) {
-        boolean hasError = false;
-        int neighborCount = 0;
-        logger.debug("flagScanOneForRows rowCount " + rowCount);
-        for (int row = 0; row < rowCount; row++) {
-            for (int col = 0; col < neighbors[row].length; col++) {
-                if (neighbors[row][col] > distanceThreshold) continue;
-                boolean neighborFound = (row > 0 && neighbors[row-1][col] == distanceThreshold + 1) ||
-                        (row < neighbors.length -1 && neighbors[row+1][col] == distanceThreshold + 1) ||
-                        (col > 0 && neighbors[row][col-1] == distanceThreshold + 1) ||
-                        (col < neighbors[row].length -1 && neighbors[row][col+1]  == distanceThreshold + 1);
-                int prevVal = neighbors[row][col];
-                neighbors[row][col] = neighborFound ? distanceThreshold : prevVal;
-                neighborCount += neighborFound && prevVal == 0 ? 1 : 0;
-            }
-        }
-        return neighborCount;
-    }
-    /**
-     *  For very large data sets we only hold a portion of the array in memory. We reuse the array by processing a portion
-     *  then assign the bottom row of the old neighbors array to the top of the new one to allow more processing
-     *  clear all other rows
+     *  For very large data sets we only hold a portion of the array in memory.
+     *  We reuse the array by processing a portion
+     *  then assign the bottom row of the old neighbors array to the top of the new one
+     *  to allow more processing and clear all other rows
+     *  to ensure that the bottom rows in one chunk are flagged by the top rows in the next chunk
+     *  we calculate extra rows equal to the distanceThreshold and discard them
      * @param neighbors two dimensional array to hold calculations for a portion of the result
-     * @param discardRows count of rows only partially calculated
+     * @param discardRows count of rows only calculated to ensure rows above are correct
+     * @return count of found neighbors in this chunk
      */
     private static int neighborShift(int [][] neighbors, int discardRows) {
         int endRow = neighbors.length -1 - discardRows;

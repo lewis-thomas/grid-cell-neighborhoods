@@ -26,12 +26,15 @@ public class Neighbors {
      * of squares that are within Manhattan Distance of any positive values from the input array
      * outputs the result to the console
      * Contains an algorithm optimized for sparse arrays and an algorithm optimized for dense arrays
-     * If PERFORM_TEST=true the function will run both algorithms and confirm they generate the same result
+     *
      * @param args a string filename of a JSON file containing
      *             a "data" 2 dimensional array
      *             a "distanceThreshold" integer > 0
      *             an optional "density" that can be "sparse", "dense" or by default "test"
      *             which determines which algorithm is used (if PERFORM_TEST both are still run)
+     *
+     *             [optional] -perform_test trigger both algorithms and confirm they generate the same result
+     *             [optional] -mem_saver execute the dense version with a chunk approach saving memory
      */
     public static void main(String[] args) {
         long startTime = System.nanoTime();
@@ -123,6 +126,7 @@ public class Neighbors {
      *                 rowCount grid row length
      *                 flagCount count of flagged values
      * @param performTest if a validation test should be performed
+     * @param memSaver if the dense algorithm should use a chunked based approach saving memory
      * @return count of cells falling within distanceThreshold of true values in array
      */
     private static int getNeighbors(FlagValues flagData,
