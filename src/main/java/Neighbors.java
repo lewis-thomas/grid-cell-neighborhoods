@@ -48,6 +48,9 @@ public class Neighbors {
             argSet.add(args[i]);
         }
         boolean performTest = argSet.contains("-perform_test");
+        boolean memSaver = argSet.contains("-mem_saver");
+        logger.info("performTest: " + performTest);
+        logger.info("memSaver: " + memSaver);
 
         String jsonData = null;
         try {
@@ -62,7 +65,7 @@ public class Neighbors {
                     "integer >=0 and a 'data' 2 dimenisonal array");
             return;
         }
-        int neighborCount = getNeighbors(flagData, performTest);
+        int neighborCount = getNeighbors(flagData, performTest, memSaver);
         System.out.println("found neighbor count " + neighborCount);
         long endTime = System.nanoTime();
         long duration = endTime - startTime;
@@ -123,7 +126,8 @@ public class Neighbors {
      * @return count of cells falling within distanceThreshold of true values in array
      */
     private static int getNeighbors(FlagValues flagData,
-                                    boolean performTest) {
+                                    boolean performTest,
+                                    boolean memSaver) {
         boolean isSparse;
         if (flagData.density == FlagValues.Density.TEST) {
             isSparse = !arrayIsDense(flagData.colCount * flagData.rowCount,
@@ -134,10 +138,10 @@ public class Neighbors {
         }
 
         int neighborCount = isSparse ? ScanFlagFill.flagFill(flagData) :
-                ScanMultiPass.flagScan(flagData, 500);
+                ScanMultiPass.flagScan(flagData, memSaver);
         if (performTest) {
             logger.info("executing test");
-            int altCount = isSparse ? ScanMultiPass.flagScan(flagData) :
+            int altCount = isSparse ? ScanMultiPass.flagScan(flagData, memSaver) :
                     ScanFlagFill.flagFill(flagData);
             if (altCount != neighborCount) {
                 logger.error("Primary " + neighborCount +" and Alternate " + altCount +" counts do not match");

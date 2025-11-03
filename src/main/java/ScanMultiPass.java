@@ -12,21 +12,26 @@ import org.slf4j.LoggerFactory;
  *  rather than individual flags
  */
 class ScanMultiPass {
+    public static final int MEM_SAVER_ROWS = 500;
     private static Logger logger = LoggerFactory.getLogger(ScanMultiPass.class);
     private record ScanRowsResult(int neighborCount, int flagIndex) {}
 
-    /**
-     * Find all neighbors of true values in 2 dimensional array within
-     * distanceThreshold Manhattan Distance of a flagged (true) value
-     * For each flagged element we add a value distanceThreshold + 1 to the neighbors array
-     * in the corresponding location
-     * then we make repeated passes flagScanOne flagging all neighbors of flagged values
-     * If all values in the array flagged exit
-     * @param flagData an object containing
-     *                grid coordinates of flagged values set to true
-     *                distanceThreshold a number of Manhattan Distance steps to walk for neighbors
-     * @return count of all neighbors within distanceThreshold Manhattan Distance of a flagged (true) value
-     */
+    public static int flagScan(FlagValues flagData, boolean memSaver) {
+        return memSaver ? flagScan(flagData, MEM_SAVER_ROWS) : flagScan (flagData);
+    }
+
+        /**
+         * Find all neighbors of true values in 2 dimensional array within
+         * distanceThreshold Manhattan Distance of a flagged (true) value
+         * For each flagged element we add a value distanceThreshold + 1 to the neighbors array
+         * in the corresponding location
+         * then we make repeated passes flagScanOne flagging all neighbors of flagged values
+         * If all values in the array flagged exit
+         * @param flagData an object containing
+         *                grid coordinates of flagged values set to true
+         *                distanceThreshold a number of Manhattan Distance steps to walk for neighbors
+         * @return count of all neighbors within distanceThreshold Manhattan Distance of a flagged (true) value
+         */
     public static int flagScan(FlagValues flagData) {
         logger.info("flagging with scan multipass");
         int[][] neighbors = new int[flagData.rowCount][flagData.colCount];
@@ -66,7 +71,7 @@ class ScanMultiPass {
      * @return count of all neighbors within distanceThreshold Manhattan Distance of a flagged (true) value
      */
     public static int flagScan(FlagValues flagData, int maxRows) {
-        logger.info("flagging with scan multipass");
+        logger.info("flagging with scan multipass maxRows " + maxRows);
         StringBuilder sb = new StringBuilder();
         boolean hasError = false;
         int neighborCount = 0;
