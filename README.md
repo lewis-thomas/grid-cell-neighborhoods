@@ -142,8 +142,7 @@ To ensure that the bottom rows in one chunk are
 flagged by the top rows in the next chunk extra rows 
 equal to the distanceThreshold are added to the calculation
 thus updating the bottom rows in the upper chunk. 
-Those rows are currently discarded, although it should
-be possible to copy them down to the next chunk.
+Those rows are currently discarded as they are only partially calculated.
 
 The second issue is to ensure that values from the bottom of 
 one chunk propagate to the next. This is done by copying the last row
